@@ -15,7 +15,7 @@ BATCH_SIZE = 16
 '''
 Variables for training
 '''
-NUMBER_EPOCHS = 1
+EPOCHS = 5
 LEARNING_RATE = 1e-5
 EPSILON = 1e-8
 CLIPNORM = 1.0
@@ -38,32 +38,66 @@ def create_tf_dataset(train_path, tokenizer, max_length, test_size, batch_size, 
     train_X, validation_X, train_y, validation_y = train_test_split(X, y, random_state=random_state, test_size=test_size)
     train_dataset = tf.data.Dataset.from_tensor_slices((train_X, train_y)).shuffle(shuffle).batch(batch_size)
     validation_dataset = tf.data.Dataset.from_tensor_slices((validation_X, validation_y)).batch(batch_size)
-    return train_dataset, validation_dataset
+    return train_dataset, validation_dataset, len(validation_X), len(validation_y)
 
-def train_epoch(model, optimizer, loss, metrics, train_dataset, validation_dataset):
-    model.compile(optimizer=optimizer, loss=loss, metrics=metrics)
-    history = model.fit(train_dataset, epochs=1, validation_data=validation_dataset)
-    return history
+@tf.function
+def train_step(model, optimizer, loss, inputs, gold, train_loss):
+    with tf.GradientTape() as tape:
+        predictions = model(inputs, training=True)
+        loss = loss(gold, predictions)
+    gradients = tape.gradient(loss, model.trainable_variables)
+    optimizer.apply_gradients(zip(gradients, model.trainable_variables))
+    train_loss(loss)
+
+@tf.function
+def test_step(model, loss, inputs, gold, validation_loss):
+    predictions = model(inputs, training=False)
+    t_loss = loss(gold, predictions)
+    validation_loss(t_loss)
 
 def main():
+    '''
+    Load Hugging Face tokenizer and model
+    '''
     tokenizer = AlbertTokenizer.from_pretrained('albert-base-v2')
-    print("CREATE MODEL")
     model = Scorer(tokenizer, TFAlbertModel, MAX_LENGTH)
     model.from_pretrained('albert-base-v2')
-    print("CREATE DATASET")
-    train_dataset, validation_dataset = create_tf_dataset(TRAIN_PATH, tokenizer, MAX_LENGTH, TEST_SIZE, BATCH_SIZE)
-    print("TRAINING PREPARATION")
+
+    '''
+    Create train and validation dataset
+    '''
+    train_dataset, validation_dataset, train_length, validation_length = create_tf_dataset(TRAIN_PATH, tokenizer, MAX_LENGTH, TEST_SIZE, BATCH_SIZE)
+
+    '''
+    Initialize optimizer and loss function for training
+    '''
     optimizer = tf.keras.optimizers.Adam(learning_rate=LEARNING_RATE, epsilon=EPSILON, clipnorm=CLIPNORM)
     loss = tf.keras.losses.MeanSquaredError()
-    metrics = [tf.keras.metrics.MeanSquaredError()]
+    
+    '''
+    Define metrics
+    '''
+    train_loss = tf.keras.metrics.Mean(name='train_loss')
+    validation_loss = tf.keras.metrics.Mean(name='validation_loss')
 
-    history = []
-    for i in range(NUMBER_EPOCHS):
-        print("EPOCH {}".format(i))
-        history_epoch = train_epoch(model, optimizer, loss, metrics, train_dataset, validation_dataset)
-        history.append(history_epoch)
+    '''
+    Training loop over epochs
+    '''
+    for epoch in range(EPOCHS):
+        train_loss.reset_states()
+        validation_loss.reset_states()
 
-    print('History:', history[0])
+        for inputs, gold in tqdm(train_dataset, desc="Training in progress", total=train_length/BATCH_SIZE):
+            train_step(model, optimizer, loss, inputs, gold, train_loss)
+
+        for inputs, gold in tqdm(validation_dataset, desc="Validation in progress", total=validation_length/BATCH_SIZE):
+            test_step(model, loss, inputs, gold, validation_loss)
+
+        template = 'Epoch {}, Loss: {}, Validation Loss: {}'
+        print(template.format(epoch+1,
+                                train_loss.result(),
+                                validation_loss.result()))
+
 
 
 if __name__ == "__main__":
