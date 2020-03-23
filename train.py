@@ -17,7 +17,7 @@ BATCH_SIZE = 16
 Variables for training
 '''
 EPOCHS = 3
-LEARNING_RATE = 1e-5
+LEARNING_RATE = 5e-6
 EPSILON = 1e-8
 CLIPNORM = 1.0
 

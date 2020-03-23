@@ -15,7 +15,7 @@ class ScoreAccuracy(tf.keras.metrics.Metric):
             sample_weight = tf.cast(sample_weight, 'float32')
             values = tf.multiply(values, sample_weight)
         self.sum.assign_add(tf.reduce_sum(values))
-        self.step.assign_add(1.)
+        self.step.assign_add(tf.shape(y_true)[0])
 
     def result(self):
         return tf.math.divide(self.sum, self.step)
