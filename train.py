@@ -104,7 +104,8 @@ def main():
                                 train_loss.result(),
                                 train_acc.result(),
                                 validation_loss.result(),
-                                validation_acc.result()))
+                                validation_acc.result()
+                                ))
 
 
 
