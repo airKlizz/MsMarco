@@ -1,0 +1,10 @@
+# Data files
+data/collections/*
+data/evaluation/*
+data/passages/*
+data/qrels/*
+data/queries/*
+data/train/*
+
+# Model weights
+model/weights/*
