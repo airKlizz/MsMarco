@@ -9,7 +9,6 @@ class ScoreAccuracy(tf.keras.metrics.Metric):
         self.interval = tf.constant(1 / (2 * (y_max-1)))
 
     def update_state(self, y_true, y_pred, sample_weight=None):
-        print('\n\nSCORE ACCURACY | update state | y_true : {} | t_pred : {}\n\n'.format(y_true, y_pred))
         values = tf.math.abs(tf.cast(y_true, 'float32') - tf.cast(y_pred, 'float32')) <= self.interval
         values = tf.cast(values, 'float32')
         if sample_weight is not None:
