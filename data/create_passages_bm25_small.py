@@ -3,24 +3,22 @@ import json
 
 from tqdm import tqdm
 
-qrels_test_path = "qrels/qrels.test.tsv"
+N_TOP = 3
+
+bm25_run_path = "evaluation/bm25/run.dev.small.tsv"
 docs_paths = ["collections/docs00.json", "collections/docs01.json", "collections/docs02.json", "collections/docs03.json",
               "collections/docs04.json", "collections/docs05.json", "collections/docs06.json", "collections/docs07.json",
               "collections/docs08.json"]
 
-qrels_df = pd.read_csv(qrels_test_path, sep=' ', header=None, names=['qid', 'Q0', 'pid', 'rating'])
+bm25_df = pd.read_csv(bm25_run_path, sep='	', header=0, names=['qid', 'pid', 'rank'])
+bm25_df = bm25_df.loc[bm25_df['rank'] <= N_TOP]
 
-qids = list(set(qrels_df['qid'].to_list()))
-pids = list(set(qrels_df['pid'].to_list()))
-rating = qrels_df['rating'].to_list()
+qids = list(set(bm25_df['qid'].to_list()))
+pids = list(set(bm25_df['pid'].to_list()))
+ranks = bm25_df['rank'].to_list()
 
 print('Number of qids: ', len(qids))
 print('Number of pids: ', len(pids))
-print()
-print('Number of rate 0: ', rating.count(0))
-print('Number of rate 1: ', rating.count(1))
-print('Number of rate 2: ', rating.count(2))
-print('Number of rate 3: ', rating.count(3))
 print()
 
 small_pids = {}
@@ -34,7 +32,7 @@ for i, doc in enumerate(docs_paths):
 print('Number of passage found: ', len(small_pids))
 print()
 
-with open('passages.test.small.json', 'w') as fp:
+with open('passages.bm25.small.json', 'w') as fp:
     json.dump(small_pids, fp)
         
 

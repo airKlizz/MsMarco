@@ -4,6 +4,8 @@ from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 from model.scorer import Scorer
 from metrics.score_accuracy import ScoreAccuracy
+from mmr.run_mmr import EvaluationQueries
+from mmr.msmarco_eval import compute_metrics_from_files
 
 '''
 Variables for dataset
@@ -11,7 +13,7 @@ Variables for dataset
 TRAIN_PATH = 'data/train/test.tsv'
 MAX_LENGTH = 128
 TEST_SIZE = 0.2
-BATCH_SIZE = 16
+BATCH_SIZE = 8
 
 '''
 Variables for training
@@ -20,6 +22,17 @@ EPOCHS = 3
 LEARNING_RATE = 5e-6
 EPSILON = 1e-8
 CLIPNORM = 1.0
+
+'''
+Variables for eval
+'''
+BM25_PATH = "data/evaluation/bm25/run.dev.small.tsv"
+PASSAGES_PATH = "data/passages/passages.bm25.small.json"
+QUERIES_PATH = "data/queries/queries.dev.small.tsv"
+N_TOP = 3
+N_QUERIES_TO_EVALUATE = 100 #None if all
+REFERENCE_PATH = 'data/evaluation/gold/qrels.dev.small.tsv'
+CANDIDATE_PATH = 'data/evaluation/albert-base-v2/run.tsv'
 
 def create_tf_dataset(train_path, tokenizer, max_length, test_size, batch_size, shuffle=10000, random_state=2020):
     with open(train_path, 'r') as f:
@@ -71,6 +84,14 @@ def main():
     Create train and validation dataset
     '''
     train_dataset, validation_dataset, train_length, validation_length, y_max = create_tf_dataset(TRAIN_PATH, tokenizer, MAX_LENGTH, TEST_SIZE, BATCH_SIZE)
+    ## Reduce dataset to run on local machine 
+    ## Need to be removed for the real training
+    train_dataset = train_dataset.take(10)
+    validation_dataset = validation_dataset.take(10)
+    train_length = 10 * BATCH_SIZE
+    validation_length = 10 * BATCH_SIZE
+    ## End
+
 
     '''
     Initialize optimizer and loss function for training
@@ -85,6 +106,7 @@ def main():
     validation_loss = tf.keras.metrics.Mean(name='validation_loss')
     train_acc = ScoreAccuracy(y_max, name='train_score_accuracy')
     validation_acc = ScoreAccuracy(y_max, name='validation_score_accuracy')
+    mmr = EvaluationQueries(BM25_PATH, QUERIES_PATH, PASSAGES_PATH, N_TOP)
 
     '''
     Training loop over epochs
@@ -99,12 +121,17 @@ def main():
         for inputs, gold in tqdm(validation_dataset, desc="Validation in progress", total=validation_length/BATCH_SIZE):
             test_step(model, loss, inputs, gold, validation_loss, validation_acc)
 
-        template = 'Epoch {}, Loss: {}, Acc: {}, Validation Loss: {}, Validation Acc: {}'
+        mmr.score(model, CANDIDATE_PATH, N_QUERIES_TO_EVALUATE)
+        mmr_metrics = compute_metrics_from_files(REFERENCE_PATH, CANDIDATE_PATH)
+        
+        template = 'Epoch {}, Loss: {}, Acc: {}, Validation Loss: {}, Validation Acc: {}, Queries ranked: {}, MRR @10: {}'
         print(template.format(epoch+1,
                                 train_loss.result(),
                                 train_acc.result(),
                                 validation_loss.result(),
-                                validation_acc.result()
+                                validation_acc.result(),
+                                mmr_metrics['QueriesRanked'],
+                                mmr_metrics['MRR @10']
                                 ))
 
 

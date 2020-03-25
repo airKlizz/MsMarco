@@ -8,3 +8,8 @@ data/train/*
 
 # Model weights
 model/weights/*
+
+# __pycache__
+metrics/__pycache__/
+mmr/__pycache__/
+model/__pycache__/
