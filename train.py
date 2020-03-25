@@ -2,37 +2,11 @@ import tensorflow as tf
 from transformers import TFAlbertModel, AlbertTokenizer
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
+import argparse
 from model.scorer import Scorer
 from metrics.score_accuracy import ScoreAccuracy
 from mmr.run_mmr import EvaluationQueries
 from mmr.msmarco_eval import compute_metrics_from_files
-
-'''
-Variables for dataset
-'''
-TRAIN_PATH = 'data/train/test.tsv'
-MAX_LENGTH = 128
-TEST_SIZE = 0.2
-BATCH_SIZE = 8
-
-'''
-Variables for training
-'''
-EPOCHS = 3
-LEARNING_RATE = 5e-6
-EPSILON = 1e-8
-CLIPNORM = 1.0
-
-'''
-Variables for eval
-'''
-BM25_PATH = "data/evaluation/bm25/run.dev.small.tsv"
-PASSAGES_PATH = "data/passages/passages.bm25.small.json"
-QUERIES_PATH = "data/queries/queries.dev.small.tsv"
-N_TOP = 3
-N_QUERIES_TO_EVALUATE = 100 #None if all
-REFERENCE_PATH = 'data/evaluation/gold/qrels.dev.small.tsv'
-CANDIDATE_PATH = 'data/evaluation/albert-base-v2/run.tsv'
 
 def create_tf_dataset(train_path, tokenizer, max_length, test_size, batch_size, shuffle=10000, random_state=2020):
     with open(train_path, 'r') as f:
@@ -72,31 +46,31 @@ def test_step(model, loss, inputs, gold, validation_loss, validation_acc):
     validation_loss(t_loss)
     validation_acc(gold, predictions)
 
-def main():
+def main(train_path, max_length, test_size, batch_size, epochs, learning_rate, epsilon, clipnorm, bm25_path, passages_path, queries_path, n_top, n_queries_to_evaluate, reference_path, candidate_path):
     '''
     Load Hugging Face tokenizer and model
     '''
     tokenizer = AlbertTokenizer.from_pretrained('albert-base-v2')
-    model = Scorer(tokenizer, TFAlbertModel, MAX_LENGTH)
+    model = Scorer(tokenizer, TFAlbertModel, max_length)
     model.from_pretrained('albert-base-v2')
 
     '''
     Create train and validation dataset
     '''
-    train_dataset, validation_dataset, train_length, validation_length, y_max = create_tf_dataset(TRAIN_PATH, tokenizer, MAX_LENGTH, TEST_SIZE, BATCH_SIZE)
+    train_dataset, validation_dataset, train_length, validation_length, y_max = create_tf_dataset(train_path, tokenizer, max_length, test_size, batch_size)
     ## Reduce dataset to run on local machine 
     ## Need to be removed for the real training
     train_dataset = train_dataset.take(10)
     validation_dataset = validation_dataset.take(10)
-    train_length = 10 * BATCH_SIZE
-    validation_length = 10 * BATCH_SIZE
+    train_length = 10 * batch_size
+    validation_length = 10 * batch_size
     ## End
 
 
     '''
     Initialize optimizer and loss function for training
     '''
-    optimizer = tf.keras.optimizers.Adam(learning_rate=LEARNING_RATE, epsilon=EPSILON, clipnorm=CLIPNORM)
+    optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate, epsilon=epsilon, clipnorm=clipnorm)
     loss = tf.keras.losses.MeanSquaredError()
     
     '''
@@ -106,23 +80,23 @@ def main():
     validation_loss = tf.keras.metrics.Mean(name='validation_loss')
     train_acc = ScoreAccuracy(y_max, name='train_score_accuracy')
     validation_acc = ScoreAccuracy(y_max, name='validation_score_accuracy')
-    mmr = EvaluationQueries(BM25_PATH, QUERIES_PATH, PASSAGES_PATH, N_TOP)
+    mmr = EvaluationQueries(bm25_path, queries_path, passages_path, n_top)
 
     '''
     Training loop over epochs
     '''
-    for epoch in range(EPOCHS):
+    for epoch in range(epochs):
         train_loss.reset_states()
         validation_loss.reset_states()
 
-        for inputs, gold in tqdm(train_dataset, desc="Training in progress", total=train_length/BATCH_SIZE):
+        for inputs, gold in tqdm(train_dataset, desc="Training in progress", total=train_length/batch_size):
             train_step(model, optimizer, loss, inputs, gold, train_loss, train_acc)
 
-        for inputs, gold in tqdm(validation_dataset, desc="Validation in progress", total=validation_length/BATCH_SIZE):
+        for inputs, gold in tqdm(validation_dataset, desc="Validation in progress", total=validation_length/batch_size):
             test_step(model, loss, inputs, gold, validation_loss, validation_acc)
 
-        mmr.score(model, CANDIDATE_PATH, N_QUERIES_TO_EVALUATE)
-        mmr_metrics = compute_metrics_from_files(REFERENCE_PATH, CANDIDATE_PATH)
+        mmr.score(model, candidate_path, n_queries_to_evaluate)
+        mmr_metrics = compute_metrics_from_files(reference_path, candidate_path)
         
         template = 'Epoch {}, Loss: {}, Acc: {}, Validation Loss: {}, Validation Acc: {}, Queries ranked: {}, MRR @10: {}'
         print(template.format(epoch+1,
@@ -137,4 +111,36 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    '''
+    Variables for dataset
+    '''
+    parser.add_argument("--train_path", type=str, help="path to the train .tsv file", default="data/train/test.tsv")
+    parser.add_argument("--max_length", type=int, help="max length of the tokenized input", default=128)
+    parser.add_argument("--test_size", type=float, help="ratio of the test dataset", default=0.2)
+    parser.add_argument("--batch_size", type=int, help="batch size", default=16)
+    
+    '''
+    Variables for training
+    '''
+    parser.add_argument("--epochs", type=int, help="number of epochs", default=3)
+    parser.add_argument("--learning_rate", type=float, help="learning rate", default=5e-6)
+    parser.add_argument("--epsilon", type=float, help="epsilon", default=1e-8)
+    parser.add_argument("--clipnorm", type=float, help="clipnorm", default=1.0)
+
+    '''
+    Variables for evaluation
+    '''
+    parser.add_argument("--bm25_path", type=str, help="path to the BM25 run .tsv file", default="data/evaluation/bm25/run.dev.small.tsv")
+    parser.add_argument("--passages_path", type=str, help="path to the BM25 passages .json file", default="data/passages/passages.bm25.small.json")
+    parser.add_argument("--queries_path", type=str, help="path to the BM25 queries .tsv file", default="data/queries/queries.dev.small.tsv")
+    parser.add_argument("--n_top", type=int, help="number of passages to re-rank after BM25", default=50)
+    parser.add_argument("--n_queries_to_evaluate", type=int, help="number of queries to evaluate for MMR", default=None)
+    parser.add_argument("--reference_path", type=str, help="path to the reference gold .tsv file", default="data/evaluation/gold/qrels.dev.small.tsv")
+    parser.add_argument("--candidate_path", type=str, help="path to the candidate run .tsv file", default="data/evaluation/albert-base-v2/run.tsv")
+    
+    '''
+    Run main
+    '''
+    args = parser.parse_args()
+    main(args.train_path, args.max_length, args.test_size, args.batch_size, args.epochs, args.learning_rate, args.epsilon, args.clipnorm, args.bm25_path, args.passages_path, args.queries_path, args.n_top, args.n_queries_to_evaluate, args.reference_path, args.candidate_path)

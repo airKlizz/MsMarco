@@ -1,9 +1,13 @@
 import pandas as pd
 import json
+import argparse
 
 from tqdm import tqdm
 
-N_TOP = 3
+parser = argparse.ArgumentParser()
+parser.add_argument("n_top", type=int, help="number of passages to re-rank after BM25")
+args = parser.parse_args()
+
 
 bm25_run_path = "evaluation/bm25/run.dev.small.tsv"
 docs_paths = ["collections/docs00.json", "collections/docs01.json", "collections/docs02.json", "collections/docs03.json",
@@ -11,7 +15,7 @@ docs_paths = ["collections/docs00.json", "collections/docs01.json", "collections
               "collections/docs08.json"]
 
 bm25_df = pd.read_csv(bm25_run_path, sep='	', header=0, names=['qid', 'pid', 'rank'])
-bm25_df = bm25_df.loc[bm25_df['rank'] <= N_TOP]
+bm25_df = bm25_df.loc[bm25_df['rank'] <= args.n_top]
 
 qids = list(set(bm25_df['qid'].to_list()))
 pids = list(set(bm25_df['pid'].to_list()))
