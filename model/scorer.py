@@ -39,9 +39,9 @@ class Scorer(tf.keras.Model):
         return self.score(x)
 
     def score_query_passage(self, query, passage):
-        return list(np.asarray(tf.reshape(self.predict([self.prepare_input(query, passage)]), -1)))
+        return list(np.asarray(tf.reshape(self.predict([self.prepare_input(query, passage)]), (-1,))))
 
     def score_query_passages(self, query, passages, batch_size):
         queries = [query] * len(passages)
         inputs = self.prepare_inputs(queries, passages)
-        return list(np.asarray(tf.reshape(self.predict(inputs, batch_size=batch_size), -1)))
+        return list(np.asarray(tf.reshape(self.predict(inputs, batch_size=batch_size), (-1,))))
