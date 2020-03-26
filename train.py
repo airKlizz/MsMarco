@@ -58,13 +58,13 @@ def main(train_path, max_length, test_size, batch_size, epochs, learning_rate, e
     Create train and validation dataset
     '''
     train_dataset, validation_dataset, train_length, validation_length, y_max = create_tf_dataset(train_path, tokenizer, max_length, test_size, batch_size)
-    ## Reduce dataset to run on local machine 
+    '''## Reduce dataset to run on local machine 
     ## Need to be removed for the real training
     train_dataset = train_dataset.take(10)
     validation_dataset = validation_dataset.take(10)
     train_length = 10 * batch_size
     validation_length = 10 * batch_size
-    ## End
+    ## End'''
 
 
     '''
@@ -81,6 +81,8 @@ def main(train_path, max_length, test_size, batch_size, epochs, learning_rate, e
     train_acc = ScoreAccuracy(y_max, name='train_score_accuracy')
     validation_acc = ScoreAccuracy(y_max, name='validation_score_accuracy')
     mmr = EvaluationQueries(bm25_path, queries_path, passages_path, n_top)
+    if n_queries_to_evaluate == -1:
+        n_queries_to_evaluate = None
 
     '''
     Training loop over epochs
@@ -135,7 +137,7 @@ if __name__ == "__main__":
     parser.add_argument("--passages_path", type=str, help="path to the BM25 passages .json file", default="data/passages/passages.bm25.small.json")
     parser.add_argument("--queries_path", type=str, help="path to the BM25 queries .tsv file", default="data/queries/queries.dev.small.tsv")
     parser.add_argument("--n_top", type=int, help="number of passages to re-rank after BM25", default=50)
-    parser.add_argument("--n_queries_to_evaluate", type=int, help="number of queries to evaluate for MMR", default=None)
+    parser.add_argument("--n_queries_to_evaluate", type=int, help="number of queries to evaluate for MMR", default=-1)
     parser.add_argument("--reference_path", type=str, help="path to the reference gold .tsv file", default="data/evaluation/gold/qrels.dev.small.tsv")
     parser.add_argument("--candidate_path", type=str, help="path to the candidate run .tsv file", default="data/evaluation/albert-base-v2/run.tsv")
     

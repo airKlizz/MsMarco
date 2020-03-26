@@ -2,11 +2,6 @@ import pandas as pd
 import json
 from tqdm import tqdm
 
-BM25_PATH = "../data/evaluation/bm25/run.dev.small.tsv"
-PASSAGES_PATH = "../data/passages/passages.bm25.small.json"
-QUERIES_PATH = "../data/queries/queries.dev.small.tsv"
-N_TOP = 3
-
 class EvaluationQuery():
     def __init__(self, qid, pids, queries_dict, passages_dict, batch_size):
         self.qid = qid
@@ -32,10 +27,10 @@ class EvaluationQuery():
 class EvaluationQueries():
     def __init__(self, bm25_path, queries_path, passages_path, n_top):
         '''
-        Read BM25 top 1000 and reduce to N_TOP results per query
+        Read BM25 top 1000 and reduce to n_top results per query
         '''
         bm25_df = pd.read_csv(bm25_path, sep='	', header=None, names=['qid', 'pid', 'rank'])
-        bm25_df = bm25_df.loc[bm25_df['rank'] <= N_TOP]
+        bm25_df = bm25_df.loc[bm25_df['rank'] <= n_top]
         all_qids = bm25_df['qid'].to_list()
         all_pids = bm25_df['pid'].to_list()
 
@@ -69,6 +64,7 @@ class EvaluationQueries():
 
     def score(self, scorer, output_path, number_of_queries=None):
         score_str = ""
+        print('MMR Evaluation on {} queries'.format(len(self.evaluation_queries)))
         for evaluation_query in tqdm(self.evaluation_queries[:number_of_queries], desc="MMR Evaluation in progress"):
             score_str = score_str + evaluation_query.score(scorer)
         f = open(output_path, "w")
