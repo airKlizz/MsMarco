@@ -16,7 +16,7 @@ class EvaluationQuery():
     
     def score(self, scorer):
         self.scores = scorer.score_query_passages(self.query, self.passages.values(), self.batch_size)
-        pids_sorted = [pid for _,pid in sorted(zip(self.scores, self.passages.keys()))]
+        pids_sorted = [pid for _,pid in sorted(list(zip(self.scores, self.passages.keys())), key=lambda x: x[0], reverse=True)]
         score_str = ""
         for rank, pid in enumerate(pids_sorted):
             score_str = score_str + "{}\t{}\t{}\n".format(self.qid, pid, rank+1)
@@ -32,7 +32,6 @@ class EvaluationQueries():
         bm25_df = pd.read_csv(bm25_path, sep='	', header=None, names=['qid', 'pid', 'rank'])
         bm25_df = bm25_df.loc[bm25_df['rank'] <= n_top]
         all_qids = bm25_df['qid'].to_list()
-        all_pids = bm25_df['pid'].to_list()
 
         '''
         Read queries and passages files to create dicts
@@ -48,9 +47,10 @@ class EvaluationQueries():
         Create list of EvaluationQuery object
         '''
         self.evaluation_queries = []
-        for i in range(0, len(all_qids), n_top):
-            pids = all_pids[i:(i+n_top)]
-            self.evaluation_queries.append(EvaluationQuery(all_qids[i], pids, queries, passages, n_top))
+        for qid in set(all_qids):
+            df = bm25_df.loc[bm25_df['qid'] == qid]
+            pids = df['pid'].to_list()
+            self.evaluation_queries.append(EvaluationQuery(qid, pids, queries, passages, n_top))
 
     def __str__(self):
         s = '<EvaluationQueries '
