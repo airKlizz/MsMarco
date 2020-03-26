@@ -46,7 +46,7 @@ def test_step(model, loss, inputs, gold, validation_loss, validation_acc):
     validation_loss(t_loss)
     validation_acc(gold, predictions)
 
-def main(train_path, max_length, test_size, batch_size, epochs, learning_rate, epsilon, clipnorm, bm25_path, passages_path, queries_path, n_top, n_queries_to_evaluate, reference_path, candidate_path):
+def main(train_path, max_length, test_size, batch_size, epochs, learning_rate, epsilon, clipnorm, bm25_path, passages_path, queries_path, n_top, n_queries_to_evaluate, mrr_every, reference_path, candidate_path):
     '''
     Load Hugging Face tokenizer and model
     '''
@@ -97,19 +97,19 @@ def main(train_path, max_length, test_size, batch_size, epochs, learning_rate, e
         for inputs, gold in tqdm(validation_dataset, desc="Validation in progress", total=validation_length/batch_size):
             test_step(model, loss, inputs, gold, validation_loss, validation_acc)
 
-        mmr.score(model, candidate_path, n_queries_to_evaluate)
-        mmr_metrics = compute_metrics_from_files(reference_path, candidate_path)
-        
-        template = 'Epoch {}, Loss: {}, Acc: {}, Validation Loss: {}, Validation Acc: {}, Queries ranked: {}, MRR @10: {}'
+        template = 'Epoch {}, Loss: {}, Acc: {}, Validation Loss: {}, Validation Acc: {}'
         print(template.format(epoch+1,
                                 train_loss.result(),
                                 train_acc.result(),
                                 validation_loss.result(),
-                                validation_acc.result(),
-                                mmr_metrics['QueriesRanked'],
-                                mmr_metrics['MRR @10']
+                                validation_acc.result()
                                 ))
-
+        if (epoch+1) % mrr_every == 0:
+            mmr.score(model, candidate_path, n_queries_to_evaluate)
+            mmr_metrics = compute_metrics_from_files(reference_path, candidate_path)
+            print(
+                'Queries ranked: {}, MRR @10: {}'.format(mmr_metrics['QueriesRanked'], mmr_metrics['MRR @10'])
+            )
 
 
 if __name__ == "__main__":
@@ -125,7 +125,7 @@ if __name__ == "__main__":
     '''
     Variables for training
     '''
-    parser.add_argument("--epochs", type=int, help="number of epochs", default=3)
+    parser.add_argument("--epochs", type=int, help="number of epochs", default=10)
     parser.add_argument("--learning_rate", type=float, help="learning rate", default=5e-6)
     parser.add_argument("--epsilon", type=float, help="epsilon", default=1e-8)
     parser.add_argument("--clipnorm", type=float, help="clipnorm", default=1.0)
@@ -138,6 +138,7 @@ if __name__ == "__main__":
     parser.add_argument("--queries_path", type=str, help="path to the BM25 queries .tsv file", default="data/queries/queries.dev.small.tsv")
     parser.add_argument("--n_top", type=int, help="number of passages to re-rank after BM25", default=50)
     parser.add_argument("--n_queries_to_evaluate", type=int, help="number of queries to evaluate for MMR", default=-1)
+    parser.add_argument("--mrr_every", type=int, help="number of epochs between mrr eval", default=5)
     parser.add_argument("--reference_path", type=str, help="path to the reference gold .tsv file", default="data/evaluation/gold/qrels.dev.small.tsv")
     parser.add_argument("--candidate_path", type=str, help="path to the candidate run .tsv file", default="data/evaluation/albert-base-v2/run.tsv")
     
@@ -145,4 +146,4 @@ if __name__ == "__main__":
     Run main
     '''
     args = parser.parse_args()
-    main(args.train_path, args.max_length, args.test_size, args.batch_size, args.epochs, args.learning_rate, args.epsilon, args.clipnorm, args.bm25_path, args.passages_path, args.queries_path, args.n_top, args.n_queries_to_evaluate, args.reference_path, args.candidate_path)
+    main(args.train_path, args.max_length, args.test_size, args.batch_size, args.epochs, args.learning_rate, args.epsilon, args.clipnorm, args.bm25_path, args.passages_path, args.queries_path, args.n_top, args.n_queries_to_evaluate, args.mrr_every, args.reference_path, args.candidate_path)
