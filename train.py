@@ -30,7 +30,7 @@ def create_tf_dataset(train_path, tokenizer, max_length, test_size, batch_size, 
     return train_dataset, validation_dataset, len(train_y)+1, len(validation_y)+1, y_max
 
 @tf.function
-def train_step(model, optimizer, loss, inputs, gold, train_loss, train_acc):
+def train_step(model, optimizer, loss, inputs, gold, train_loss, train_acc, train_mae):
     with tf.GradientTape() as tape:
         predictions = model(inputs, training=True)
         loss_value = loss(gold, predictions)
@@ -38,14 +38,16 @@ def train_step(model, optimizer, loss, inputs, gold, train_loss, train_acc):
     optimizer.apply_gradients(zip(gradients, model.trainable_variables))
     train_loss(loss_value)
     train_acc(gold, predictions)
+    train_mae(gold, predictions)
     return predictions, loss_value
 
 @tf.function
-def test_step(model, loss, inputs, gold, validation_loss, validation_acc):
+def test_step(model, loss, inputs, gold, validation_loss, validation_acc, validation_mae):
     predictions = model(inputs, training=False)
     t_loss = loss(gold, predictions)
     validation_loss(t_loss)
     validation_acc(gold, predictions)
+    validation_mae(gold, predictions)
     return predictions, t_loss
 
 def main(model_name, train_path, max_length, test_size, batch_size, epochs, learning_rate, epsilon, clipnorm, bm25_path, passages_path, queries_path, n_top, n_queries_to_evaluate, mrr_every, reference_path, candidate_path):
@@ -65,7 +67,7 @@ def main(model_name, train_path, max_length, test_size, batch_size, epochs, lear
     Initialize optimizer and loss function for training
     '''
     optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate, epsilon=epsilon, clipnorm=clipnorm)
-    loss = tf.keras.losses.MeanAbsoluteError()
+    loss = tf.keras.losses.MeanSquaredError()
     
     '''
     Define metrics
@@ -74,6 +76,9 @@ def main(model_name, train_path, max_length, test_size, batch_size, epochs, lear
     validation_loss = tf.keras.metrics.Mean(name='validation_loss')
     train_acc = ScoreAccuracy(y_max, name='train_score_accuracy')
     validation_acc = ScoreAccuracy(y_max, name='validation_score_accuracy')
+    train_mae = tf.keras.metrics.MeanAbsoluteError(name='train_mean_absolute_error')
+    validation_mae = tf.keras.metrics.MeanAbsoluteError(name='validation_mean_absolute_error')
+
     mmr = EvaluationQueries(bm25_path, queries_path, passages_path, n_top)
     if n_queries_to_evaluate == -1:
         n_queries_to_evaluate = None
@@ -86,19 +91,21 @@ def main(model_name, train_path, max_length, test_size, batch_size, epochs, lear
         validation_loss.reset_states()
 
         for inputs, gold in tqdm(train_dataset, desc="Training in progress", total=train_length/batch_size):
-            predictions, loss_value = train_step(model, optimizer, loss, inputs, gold, train_loss, train_acc)
+            predictions, loss_value = train_step(model, optimizer, loss, inputs, gold, train_loss, train_acc, train_mae)
         print("\nTraining exemple:\nGold: {} Predictions: {} Loss: {} Acc: {}".format(gold, predictions, loss_value, ScoreAccuracy.calculate_score_accuracy(gold, predictions, 1/6)))
 
         for inputs, gold in tqdm(validation_dataset, desc="Validation in progress", total=validation_length/batch_size):
-            predictions, loss_value = test_step(model, loss, inputs, gold, validation_loss, validation_acc)
+            predictions, loss_value = test_step(model, loss, inputs, gold, validation_loss, validation_acc, validation_mae)
         print("\nValidation exemple:\nGold: {} Predictions: {} Loss: {} Acc: {}".format(gold, predictions, loss_value, ScoreAccuracy.calculate_score_accuracy(gold, predictions, 1/6)))
 
-        template = 'Epoch {}, Loss: {}, Acc: {}, Validation Loss: {}, Validation Acc: {}'
+        template = 'Epoch {}, Loss: {}, Acc: {}, Mae: {}, Validation Loss: {}, Validation Acc: {}, Validation Mae: {}'
         print(template.format(epoch+1,
                                 train_loss.result(),
                                 train_acc.result(),
+                                train_mae.result(),
                                 validation_loss.result(),
-                                validation_acc.result()
+                                validation_acc.result(),
+                                validation_mae.result()
                                 ))
         if (epoch+1) % mrr_every == 0:
             mmr.score(model, candidate_path, n_queries_to_evaluate)
