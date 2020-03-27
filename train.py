@@ -46,6 +46,7 @@ def test_step(model, loss, inputs, gold, validation_loss, validation_acc):
     t_loss = loss(gold, predictions)
     validation_loss(t_loss)
     validation_acc(gold, predictions)
+    return predictions, t_loss
 
 def main(model_name, train_path, max_length, test_size, batch_size, epochs, learning_rate, epsilon, clipnorm, bm25_path, passages_path, queries_path, n_top, n_queries_to_evaluate, mrr_every, reference_path, candidate_path):
     '''
@@ -64,7 +65,7 @@ def main(model_name, train_path, max_length, test_size, batch_size, epochs, lear
     Initialize optimizer and loss function for training
     '''
     optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate, epsilon=epsilon, clipnorm=clipnorm)
-    loss = tf.keras.losses.MeanSquaredError()
+    loss = tf.keras.losses.MeanAbsoluteError()
     
     '''
     Define metrics
@@ -86,18 +87,11 @@ def main(model_name, train_path, max_length, test_size, batch_size, epochs, lear
 
         for inputs, gold in tqdm(train_dataset, desc="Training in progress", total=train_length/batch_size):
             predictions, loss_value = train_step(model, optimizer, loss, inputs, gold, train_loss, train_acc)
-            print("\nGold: {} Predictions: {} Loss: {} Acc: {}".format(gold, predictions, loss_value, ScoreAccuracy.calculate_score_accuracy(gold, predictions, 1/6)))
-            try:
-                print("\nNumpy:\nGold: {} Predictions: {} Loss: {} Acc: {}".format(gold.numpy(), predictions.numpy(), loss_value.numpy(), ScoreAccuracy.calculate_score_accuracy(gold, predictions, 1/6).numpy()))
-            except:
-                print("Numpy impossible")
-                try:
-                    print("\nEval\nGold: {} Predictions: {} Loss: {} Acc: {}".format(gold.eval(), predictions.eval(), loss_value.eval(), ScoreAccuracy.calculate_score_accuracy(gold, predictions, 1/6).eval()))
-                except:
-                    print("Eval impossible")
+        print("\nTraining exemple:\nGold: {} Predictions: {} Loss: {} Acc: {}".format(gold, predictions, loss_value, ScoreAccuracy.calculate_score_accuracy(gold, predictions, 1/6)))
 
         for inputs, gold in tqdm(validation_dataset, desc="Validation in progress", total=validation_length/batch_size):
-            test_step(model, loss, inputs, gold, validation_loss, validation_acc)
+            predictions, loss_value = test_step(model, loss, inputs, gold, validation_loss, validation_acc)
+        print("\nValidation exemple:\nGold: {} Predictions: {} Loss: {} Acc: {}".format(gold, predictions, loss_value, ScoreAccuracy.calculate_score_accuracy(gold, predictions, 1/6)))
 
         template = 'Epoch {}, Loss: {}, Acc: {}, Validation Loss: {}, Validation Acc: {}'
         print(template.format(epoch+1,
