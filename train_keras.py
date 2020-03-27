@@ -77,9 +77,6 @@ def main(model_name, train_path, max_length, test_size, batch_size, epochs, lear
     '''
     Training loop over epochs
     '''
-    input_shape = (batch_size, 1)
-    model.build(input_shape)
-    print(model.summary())
     model.fit(train_dataset, epochs=epochs, validation_data=validation_dataset)
 
 
