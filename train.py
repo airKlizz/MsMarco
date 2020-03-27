@@ -1,5 +1,5 @@
 import tensorflow as tf
-from transformers import TFAlbertModel, AlbertTokenizer
+from transformers import TFAutoModel, AutoTokenizer
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 import argparse
@@ -46,26 +46,18 @@ def test_step(model, loss, inputs, gold, validation_loss, validation_acc):
     validation_loss(t_loss)
     validation_acc(gold, predictions)
 
-def main(train_path, max_length, test_size, batch_size, epochs, learning_rate, epsilon, clipnorm, bm25_path, passages_path, queries_path, n_top, n_queries_to_evaluate, mrr_every, reference_path, candidate_path):
+def main(model_name, train_path, max_length, test_size, batch_size, epochs, learning_rate, epsilon, clipnorm, bm25_path, passages_path, queries_path, n_top, n_queries_to_evaluate, mrr_every, reference_path, candidate_path):
     '''
     Load Hugging Face tokenizer and model
     '''
-    tokenizer = AlbertTokenizer.from_pretrained('albert-base-v2')
-    model = Scorer(tokenizer, TFAlbertModel, max_length)
-    model.from_pretrained('albert-base-v2')
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    model = Scorer(tokenizer, TFAutoModel, max_length)
+    model.from_pretrained(model_name)
 
     '''
     Create train and validation dataset
     '''
     train_dataset, validation_dataset, train_length, validation_length, y_max = create_tf_dataset(train_path, tokenizer, max_length, test_size, batch_size)
-    '''## Reduce dataset to run on local machine 
-    ## Need to be removed for the real training
-    train_dataset = train_dataset.take(10)
-    validation_dataset = validation_dataset.take(10)
-    train_length = 10 * batch_size
-    validation_length = 10 * batch_size
-    ## End'''
-
 
     '''
     Initialize optimizer and loss function for training
@@ -115,18 +107,23 @@ def main(train_path, max_length, test_size, batch_size, epochs, learning_rate, e
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     '''
+    Variables for the model
+    '''
+    parser.add_argument("--model_name", type=str, help="Name of the HugginFace Model", default="bert-large-uncased")
+
+    '''
     Variables for dataset
     '''
     parser.add_argument("--train_path", type=str, help="path to the train .tsv file", default="data/train/test.tsv")
-    parser.add_argument("--max_length", type=int, help="max length of the tokenized input", default=128)
+    parser.add_argument("--max_length", type=int, help="max length of the tokenized input", default=256)
     parser.add_argument("--test_size", type=float, help="ratio of the test dataset", default=0.2)
-    parser.add_argument("--batch_size", type=int, help="batch size", default=16)
+    parser.add_argument("--batch_size", type=int, help="batch size", default=24)
     
     '''
     Variables for training
     '''
-    parser.add_argument("--epochs", type=int, help="number of epochs", default=10)
-    parser.add_argument("--learning_rate", type=float, help="learning rate", default=5e-6)
+    parser.add_argument("--epochs", type=int, help="number of epochs", default=20)
+    parser.add_argument("--learning_rate", type=float, help="learning rate", default=5e-5)
     parser.add_argument("--epsilon", type=float, help="epsilon", default=1e-8)
     parser.add_argument("--clipnorm", type=float, help="clipnorm", default=1.0)
 
@@ -140,10 +137,10 @@ if __name__ == "__main__":
     parser.add_argument("--n_queries_to_evaluate", type=int, help="number of queries to evaluate for MMR", default=-1)
     parser.add_argument("--mrr_every", type=int, help="number of epochs between mrr eval", default=5)
     parser.add_argument("--reference_path", type=str, help="path to the reference gold .tsv file", default="data/evaluation/gold/qrels.dev.small.tsv")
-    parser.add_argument("--candidate_path", type=str, help="path to the candidate run .tsv file", default="data/evaluation/albert-base-v2/run.tsv")
+    parser.add_argument("--candidate_path", type=str, help="path to the candidate run .tsv file", default="data/evaluation/model/run.tsv")
     
     '''
     Run main
     '''
     args = parser.parse_args()
-    main(args.train_path, args.max_length, args.test_size, args.batch_size, args.epochs, args.learning_rate, args.epsilon, args.clipnorm, args.bm25_path, args.passages_path, args.queries_path, args.n_top, args.n_queries_to_evaluate, args.mrr_every, args.reference_path, args.candidate_path)
+    main(args.model_name, args.train_path, args.max_length, args.test_size, args.batch_size, args.epochs, args.learning_rate, args.epsilon, args.clipnorm, args.bm25_path, args.passages_path, args.queries_path, args.n_top, args.n_queries_to_evaluate, args.mrr_every, args.reference_path, args.candidate_path)
