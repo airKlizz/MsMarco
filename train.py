@@ -34,11 +34,11 @@ def train_step(model, optimizer, loss, inputs, gold, train_loss, train_acc):
     with tf.GradientTape() as tape:
         predictions = model(inputs, training=True)
         loss = loss(gold, predictions)
-    print("Gold: {} Predictions: {} Loss: {} Acc: {}".format(gold.eval(), predictions.eval(), loss.eval(), ScoreAccuracy.calculate_score_accuracy(gold, predictions, 1/6).eval()))
     gradients = tape.gradient(loss, model.trainable_variables)
     optimizer.apply_gradients(zip(gradients, model.trainable_variables))
     train_loss(loss)
     train_acc(gold, predictions)
+    return predictions, loss
 
 @tf.function
 def test_step(model, loss, inputs, gold, validation_loss, validation_acc):
@@ -85,7 +85,16 @@ def main(model_name, train_path, max_length, test_size, batch_size, epochs, lear
         validation_loss.reset_states()
 
         for inputs, gold in tqdm(train_dataset, desc="Training in progress", total=train_length/batch_size):
-            train_step(model, optimizer, loss, inputs, gold, train_loss, train_acc)
+            predictions, loss = train_step(model, optimizer, loss, inputs, gold, train_loss, train_acc)
+            print("Gold: {} Predictions: {} Loss: {} Acc: {}".format(gold, predictions, loss, ScoreAccuracy.calculate_score_accuracy(gold, predictions, 1/6)))
+            try:
+                print("Gold: {} Predictions: {} Loss: {} Acc: {}".format(gold.numpy(), predictions.numpy(), loss.numpy(), ScoreAccuracy.calculate_score_accuracy(gold, predictions, 1/6).numpy()))
+            except:
+                print("Numpy impossible")
+                try:
+                    print("Gold: {} Predictions: {} Loss: {} Acc: {}".format(gold.eval(), predictions.eval(), loss.eval(), ScoreAccuracy.calculate_score_accuracy(gold, predictions, 1/6).eval()))
+                except:
+                    print("Eval impossible")
 
         for inputs, gold in tqdm(validation_dataset, desc="Validation in progress", total=validation_length/batch_size):
             test_step(model, loss, inputs, gold, validation_loss, validation_acc)
