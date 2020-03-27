@@ -37,7 +37,7 @@ class Scorer(tf.keras.Model):
         x = self.model(inputs)[1] # x.shape = (None, 768)
         x = self.dense(x)     
         x = tf.reshape(self.score(x), (-1,))
-        assert tf.shape(x)[0] == tf.shape(inputs)[0], 'Error in the output shape : {}'.format(x)
+        #assert tf.shape(x)[0] == tf.shape(inputs)[0], 'Error in the output shape : {}'.format(x)
         return x
 
     def score_query_passage(self, query, passage):
