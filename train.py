@@ -33,12 +33,12 @@ def create_tf_dataset(train_path, tokenizer, max_length, test_size, batch_size, 
 def train_step(model, optimizer, loss, inputs, gold, train_loss, train_acc):
     with tf.GradientTape() as tape:
         predictions = model(inputs, training=True)
-        loss = loss(gold, predictions)
-    gradients = tape.gradient(loss, model.trainable_variables)
+        loss_value = loss(gold, predictions)
+    gradients = tape.gradient(loss_value, model.trainable_variables)
     optimizer.apply_gradients(zip(gradients, model.trainable_variables))
-    train_loss(loss)
+    train_loss(loss_value)
     train_acc(gold, predictions)
-    return predictions, loss
+    return predictions, loss_value
 
 @tf.function
 def test_step(model, loss, inputs, gold, validation_loss, validation_acc):
@@ -85,14 +85,14 @@ def main(model_name, train_path, max_length, test_size, batch_size, epochs, lear
         validation_loss.reset_states()
 
         for inputs, gold in tqdm(train_dataset, desc="Training in progress", total=train_length/batch_size):
-            predictions, loss = train_step(model, optimizer, loss, inputs, gold, train_loss, train_acc)
-            print("Gold: {} Predictions: {} Loss: {} Acc: {}".format(gold, predictions, loss, ScoreAccuracy.calculate_score_accuracy(gold, predictions, 1/6)))
+            predictions, loss_value = train_step(model, optimizer, loss, inputs, gold, train_loss, train_acc)
+            print("\nGold: {} Predictions: {} Loss: {} Acc: {}".format(gold, predictions, loss_value, ScoreAccuracy.calculate_score_accuracy(gold, predictions, 1/6)))
             try:
-                print("Gold: {} Predictions: {} Loss: {} Acc: {}".format(gold.numpy(), predictions.numpy(), loss.numpy(), ScoreAccuracy.calculate_score_accuracy(gold, predictions, 1/6).numpy()))
+                print("\nNumpy:\nGold: {} Predictions: {} Loss: {} Acc: {}".format(gold.numpy(), predictions.numpy(), loss_value.numpy(), ScoreAccuracy.calculate_score_accuracy(gold, predictions, 1/6).numpy()))
             except:
                 print("Numpy impossible")
                 try:
-                    print("Gold: {} Predictions: {} Loss: {} Acc: {}".format(gold.eval(), predictions.eval(), loss.eval(), ScoreAccuracy.calculate_score_accuracy(gold, predictions, 1/6).eval()))
+                    print("\nEval\nGold: {} Predictions: {} Loss: {} Acc: {}".format(gold.eval(), predictions.eval(), loss_value.eval(), ScoreAccuracy.calculate_score_accuracy(gold, predictions, 1/6).eval()))
                 except:
                     print("Eval impossible")
 
