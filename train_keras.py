@@ -59,24 +59,25 @@ def main(model_name, train_path, max_length, test_size, batch_size, epochs, lear
     '''
     Create train and validation dataset
     '''
-    train_dataset, validation_dataset, _, _, y_max = create_tf_dataset(train_path, tokenizer, max_length, test_size, batch_size)
+    train_dataset, validation_dataset, _, _, _ = create_tf_dataset(train_path, tokenizer, max_length, test_size, batch_size)
 
     '''
     Initialize optimizer and loss function for training
     '''
     optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate, epsilon=epsilon, clipnorm=clipnorm)
-    loss = tf.keras.losses.MeanAbsoluteError()
+    #loss = tf.keras.losses.MeanSquareError()
     
     '''
     Define metrics
     '''
     model.compile(
-        optimizer=optimizer, loss=loss, metrics=[tf.keras.metrics.Mean(), ScoreAccuracy(y_max)],
+        optimizer=optimizer, loss='mse', metrics=['mae', 'mse'],
     )
     
     '''
     Training loop over epochs
     '''
+    print(model.summary())
     model.fit(train_dataset, epochs=epochs, validation_data=validation_dataset)
 
 

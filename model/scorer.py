@@ -15,7 +15,9 @@ class Scorer(tf.keras.Model):
         self.tokenizer = tokenizer
         self.model = model
         self.dense = tf.keras.layers.Dense(512, activation='relu')
-        self.score = tf.keras.layers.Dense(1, activation='sigmoid')
+        self.score = tf.keras.layers.Dense(1
+                                        #, activation='sigmoid'
+                                        )
         self.max_length = max_length
 
     def from_pretrained(self, huggingface_model):
