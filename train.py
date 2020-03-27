@@ -34,6 +34,7 @@ def train_step(model, optimizer, loss, inputs, gold, train_loss, train_acc):
     with tf.GradientTape() as tape:
         predictions = model(inputs, training=True)
         loss = loss(gold, predictions)
+        print("Gold: {} Predictions: {} Loss: {} Acc: {}".format(gold, predictions, loss, ScoreAccuracy.calculate_score_accuracy(gold, predictions, 1/6)))
     gradients = tape.gradient(loss, model.trainable_variables)
     optimizer.apply_gradients(zip(gradients, model.trainable_variables))
     train_loss(loss)
