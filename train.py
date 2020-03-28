@@ -36,8 +36,8 @@ def create_tf_dataset(train_path, tokenizer, max_length, test_size, batch_size, 
 @tf.function
 def train_step(model, optimizer, loss, inputs, gold, class_weight, train_loss, train_acc, train_top_k_categorical_acc, train_confusion_matrix):
     labels = tf.argmax(gold, -1)
-    print('Labels: ', labels)
-    print('Labels np: ', labels.numpy())
+    print('\nLabels: ', labels)
+    #print('Labels np: ', labels.numpy())
     print('Labels eval: ', labels.eval())
     sample_weight = tf.map_fn(lambda x: class_weight[x], labels, dtype=tf.float32)
     with tf.GradientTape() as tape:
