@@ -110,7 +110,7 @@ def main(model_name, train_path, max_length, test_size, batch_size, num_classes,
         for inputs, gold in tqdm(validation_dataset, desc="Validation in progress", total=validation_length/batch_size):
             labels = tf.argmax(gold, -1)
             sample_weight = class_weight[labels.numpy().astype(int)]
-            test_step(model, loss, inputs, gold, class_weight, validation_loss, validation_acc, validation_top_k_categorical_acc, validation_confusion_matrix)
+            test_step(model, loss, inputs, gold, sample_weight, validation_loss, validation_acc, validation_top_k_categorical_acc, validation_confusion_matrix)
 
         template = '\nEpoch {}: \nTrain Loss: {}, Acc: {}, Top 2: {}, Confusion matrix:\n{}\nValidation Loss: {}, Acc: {}, Top 2: {}, Confusion matrix:\n{}'
         print(template.format(epoch+1,
