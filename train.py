@@ -4,11 +4,11 @@ from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 import argparse
 from model.scorer import Scorer
-from metrics.score_accuracy import ScoreAccuracy
+from metrics.confusion_matrix import ConfusionMatrix
 from mmr.run_mmr import EvaluationQueries
 from mmr.msmarco_eval import compute_metrics_from_files
 
-def create_tf_dataset(train_path, tokenizer, max_length, test_size, batch_size, shuffle=10000, random_state=2020):
+def create_tf_dataset(train_path, tokenizer, max_length, test_size, batch_size, num_classes, shuffle=10000, random_state=2020):
     with open(train_path, 'r') as f:
         lines = f.readlines()
 
@@ -21,16 +21,15 @@ def create_tf_dataset(train_path, tokenizer, max_length, test_size, batch_size, 
                                   text_pair=str(line[3]),
                                   max_length=max_length,
                                   pad_to_max_length=True))
-        y.append(int(line[4][0]))
-    y_max = max(y)
-    y = [(i-min(y))/(max(y)-min(y)) for i in y]
+        one_hot = [1 if i==int(line[4][0]) else 0 for i in range(num_classes)]
+        y.append(one_hot)
     train_X, validation_X, train_y, validation_y = train_test_split(X, y, random_state=random_state, test_size=test_size)
     train_dataset = tf.data.Dataset.from_tensor_slices((train_X, train_y)).shuffle(shuffle).batch(batch_size)
     validation_dataset = tf.data.Dataset.from_tensor_slices((validation_X, validation_y)).batch(batch_size)
-    return train_dataset, validation_dataset, len(train_y)+1, len(validation_y)+1, y_max
+    return train_dataset, validation_dataset, len(train_y)+1, len(validation_y)+1
 
 @tf.function
-def train_step(model, optimizer, loss, inputs, gold, train_loss, train_acc, train_mae):
+def train_step(model, optimizer, loss, inputs, gold, train_loss, train_acc, train_top_k_categorical_acc, train_confusion_matrix):
     with tf.GradientTape() as tape:
         predictions = model(inputs, training=True)
         loss_value = loss(gold, predictions)
@@ -38,46 +37,48 @@ def train_step(model, optimizer, loss, inputs, gold, train_loss, train_acc, trai
     optimizer.apply_gradients(zip(gradients, model.trainable_variables))
     train_loss(loss_value)
     train_acc(gold, predictions)
-    train_mae(gold, predictions)
-    return predictions, loss_value
+    train_top_k_categorical_acc(gold, predictions)
+    train_confusion_matrix(gold, predictions)
 
 @tf.function
-def test_step(model, loss, inputs, gold, validation_loss, validation_acc, validation_mae):
+def test_step(model, loss, inputs, gold, validation_loss, validation_acc, validation_top_k_categorical_acc, validation_confusion_matrix):
     predictions = model(inputs, training=False)
     t_loss = loss(gold, predictions)
     validation_loss(t_loss)
     validation_acc(gold, predictions)
-    validation_mae(gold, predictions)
-    return predictions, t_loss
+    validation_top_k_categorical_acc(gold, predictions)
+    validation_confusion_matrix(gold, predictions)
 
-def main(model_name, train_path, max_length, test_size, batch_size, epochs, learning_rate, epsilon, clipnorm, bm25_path, passages_path, queries_path, n_top, n_queries_to_evaluate, mrr_every, reference_path, candidate_path):
+def main(model_name, train_path, max_length, test_size, batch_size, num_classes, epochs, learning_rate, epsilon, clipnorm, bm25_path, passages_path, queries_path, n_top, n_queries_to_evaluate, mrr_every, reference_path, candidate_path):
     '''
     Load Hugging Face tokenizer and model
     '''
     tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = Scorer(tokenizer, TFAutoModel, max_length)
+    model = Scorer(tokenizer, TFAutoModel, max_length, num_classes)
     model.from_pretrained(model_name)
 
     '''
     Create train and validation dataset
     '''
-    train_dataset, validation_dataset, train_length, validation_length, y_max = create_tf_dataset(train_path, tokenizer, max_length, test_size, batch_size)
+    train_dataset, validation_dataset, train_length, validation_length = create_tf_dataset(train_path, tokenizer, max_length, test_size, batch_size, num_classes)
 
     '''
     Initialize optimizer and loss function for training
     '''
     optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate, epsilon=epsilon, clipnorm=clipnorm)
-    loss = tf.keras.losses.MeanSquaredError()
+    loss = tf.keras.losses.CategoricalCrossentropy()
     
     '''
     Define metrics
     '''
     train_loss = tf.keras.metrics.Mean(name='train_loss')
     validation_loss = tf.keras.metrics.Mean(name='validation_loss')
-    train_acc = ScoreAccuracy(y_max, name='train_score_accuracy')
-    validation_acc = ScoreAccuracy(y_max, name='validation_score_accuracy')
-    train_mae = tf.keras.metrics.MeanAbsoluteError(name='train_mean_absolute_error')
-    validation_mae = tf.keras.metrics.MeanAbsoluteError(name='validation_mean_absolute_error')
+    train_acc = tf.keras.metrics.CategoricalAccuracy(name='train_accuracy')
+    validation_acc = tf.keras.metrics.CategoricalAccuracy(name='validation_accuracy')
+    train_top_k_categorical_acc = tf.keras.metrics.TopKCategoricalAccuracy(k=2, name='train_top_2_categorical_accuracy')
+    validation_top_k_categorical_acc = tf.keras.metrics.TopKCategoricalAccuracy(k=2, name='validation_top_2_categorical_accuracy')
+    train_confusion_matrix = ConfusionMatrix(num_classes, name='train_confusion_matrix')
+    validation_confusion_matrix = ConfusionMatrix(num_classes, name='validation_confusion_matrix')
 
     mmr = EvaluationQueries(bm25_path, queries_path, passages_path, n_top)
     if n_queries_to_evaluate == -1:
@@ -91,21 +92,21 @@ def main(model_name, train_path, max_length, test_size, batch_size, epochs, lear
         validation_loss.reset_states()
 
         for inputs, gold in tqdm(train_dataset, desc="Training in progress", total=train_length/batch_size):
-            predictions, loss_value = train_step(model, optimizer, loss, inputs, gold, train_loss, train_acc, train_mae)
-        print("\nTraining exemple:\nGold: {} Predictions: {} Loss: {} Acc: {}".format(gold, predictions, loss_value, ScoreAccuracy.calculate_score_accuracy(gold, predictions, 1/6)))
+            train_step(model, optimizer, loss, inputs, gold, train_loss, train_acc, train_top_k_categorical_acc, train_confusion_matrix)
 
         for inputs, gold in tqdm(validation_dataset, desc="Validation in progress", total=validation_length/batch_size):
-            predictions, loss_value = test_step(model, loss, inputs, gold, validation_loss, validation_acc, validation_mae)
-        print("\nValidation exemple:\nGold: {} Predictions: {} Loss: {} Acc: {}".format(gold, predictions, loss_value, ScoreAccuracy.calculate_score_accuracy(gold, predictions, 1/6)))
+            test_step(model, loss, inputs, gold, validation_loss, validation_acc, validation_top_k_categorical_acc, validation_confusion_matrix)
 
-        template = 'Epoch {}, Loss: {}, Acc: {}, Mae: {}, Validation Loss: {}, Validation Acc: {}, Validation Mae: {}'
+        template = '\nEpoch {}: \nTrain Loss: {}, Acc: {}, Top 2: {}, Confusion matrix:\n{}\nValidation Loss: {}, Acc: {}, Top 2: {}, Confusion matrix:\n{}'
         print(template.format(epoch+1,
                                 train_loss.result(),
                                 train_acc.result(),
-                                train_mae.result(),
+                                train_top_k_categorical_acc.result(),
+                                train_confusion_matrix.result(),
                                 validation_loss.result(),
                                 validation_acc.result(),
-                                validation_mae.result()
+                                validation_top_k_categorical_acc.result().numpy,
+                                validation_confusion_matrix.result()
                                 ))
         if (epoch+1) % mrr_every == 0:
             mmr.score(model, candidate_path, n_queries_to_evaluate)
@@ -129,6 +130,7 @@ if __name__ == "__main__":
     parser.add_argument("--max_length", type=int, help="max length of the tokenized input", default=256)
     parser.add_argument("--test_size", type=float, help="ratio of the test dataset", default=0.2)
     parser.add_argument("--batch_size", type=int, help="batch size", default=24)
+    parser.add_argument("--num_classes", type=int, help="number of output score class", default=4)
     
     '''
     Variables for training
@@ -154,4 +156,4 @@ if __name__ == "__main__":
     Run main
     '''
     args = parser.parse_args()
-    main(args.model_name, args.train_path, args.max_length, args.test_size, args.batch_size, args.epochs, args.learning_rate, args.epsilon, args.clipnorm, args.bm25_path, args.passages_path, args.queries_path, args.n_top, args.n_queries_to_evaluate, args.mrr_every, args.reference_path, args.candidate_path)
+    main(args.model_name, args.train_path, args.max_length, args.test_size, args.batch_size, args.num_classes, args.epochs, args.learning_rate, args.epsilon, args.clipnorm, args.bm25_path, args.passages_path, args.queries_path, args.n_top, args.n_queries_to_evaluate, args.mrr_every, args.reference_path, args.candidate_path)

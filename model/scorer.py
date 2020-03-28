@@ -2,7 +2,7 @@ import tensorflow as tf
 import numpy as np
 
 class Scorer(tf.keras.Model):
-    def __init__(self, tokenizer, model, max_length):
+    def __init__(self, tokenizer, model, max_length, n_class):
         '''
         Scorer is a HuggingFace model with a scorer head to perform a passage scoring based on a query.
 
@@ -15,9 +15,7 @@ class Scorer(tf.keras.Model):
         self.tokenizer = tokenizer
         self.model = model
         self.dense = tf.keras.layers.Dense(512, activation='relu')
-        self.score = tf.keras.layers.Dense(1
-                                        #, activation='sigmoid'
-                                        )
+        self.score = tf.keras.layers.Dense(n_class, activation='softmax')
         self.max_length = max_length
 
     def from_pretrained(self, huggingface_model):
@@ -38,14 +36,21 @@ class Scorer(tf.keras.Model):
     def call(self, inputs):
         x = self.model(inputs)[1] # x.shape = (None, 768)
         x = self.dense(x)     
-        x = tf.reshape(self.score(x), (-1,))
-        #assert tf.shape(x)[0] == tf.shape(inputs)[0], 'Error in the output shape : {}'.format(x)
+        x = self.score(x)
         return x
 
     def score_query_passage(self, query, passage):
-        return list(np.asarray(tf.reshape(self.predict([self.prepare_input(query, passage)]), (-1,))))
+        return self.score_from_prediction(self.predict([self.prepare_input(query, passage)]))
 
     def score_query_passages(self, query, passages, batch_size):
         queries = [query] * len(passages)
         inputs = self.prepare_inputs(queries, passages)
-        return list(np.asarray(tf.reshape(self.predict(inputs, batch_size=batch_size), (-1,))))
+        return self.score_from_prediction(self.predict(inputs, batch_size=batch_size))
+
+    @staticmethod
+    def score_from_prediction(prediction):
+        #take value for the 4th class
+        prediction = prediction[:, -1]
+        np_prediction = np.asarray(prediction)
+        return list(np_prediction)
+        
