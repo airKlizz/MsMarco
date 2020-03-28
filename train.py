@@ -105,6 +105,7 @@ def main(model_name, train_path, max_length, test_size, batch_size, num_classes,
         for inputs, gold in tqdm(train_dataset, desc="Training in progress", total=train_length/batch_size):
             labels = tf.argmax(gold, -1)
             print('\nLabels index:', labels.numpy().astype(int))
+            print('Class weight:', class_weight)
             sample_weight = class_weight[labels.numpy().astype(int)]
             train_step(model, optimizer, loss, inputs, gold, sample_weight, train_loss, train_acc, train_top_k_categorical_acc, train_confusion_matrix)
 
