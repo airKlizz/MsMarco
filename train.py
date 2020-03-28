@@ -34,12 +34,7 @@ def create_tf_dataset(train_path, tokenizer, max_length, test_size, batch_size, 
     return train_dataset, validation_dataset, len(train_y)+1, len(validation_y)+1, class_weight
 
 @tf.function
-def train_step(model, optimizer, loss, inputs, gold, class_weight, train_loss, train_acc, train_top_k_categorical_acc, train_confusion_matrix):
-    labels = tf.argmax(gold, -1)
-    print('\nLabels: ', labels)
-    #print('Labels np: ', labels.numpy())
-    print('Labels eval: ', labels.eval())
-    sample_weight = tf.map_fn(lambda x: class_weight[x], labels, dtype=tf.float32)
+def train_step(model, optimizer, loss, inputs, gold, sample_weight, train_loss, train_acc, train_top_k_categorical_acc, train_confusion_matrix):
     with tf.GradientTape() as tape:
         predictions = model(inputs, training=True)
         loss_value = loss(gold, predictions, sample_weight=sample_weight)
@@ -51,9 +46,7 @@ def train_step(model, optimizer, loss, inputs, gold, class_weight, train_loss, t
     train_confusion_matrix(gold, predictions)
 
 @tf.function
-def test_step(model, loss, inputs, gold, class_weight, validation_loss, validation_acc, validation_top_k_categorical_acc, validation_confusion_matrix):
-    labels = tf.argmax(gold, -1)
-    sample_weight = tf.map_fn(lambda x: class_weight[x], labels, dtype=tf.float32)
+def test_step(model, loss, inputs, gold, sample_weight, validation_loss, validation_acc, validation_top_k_categorical_acc, validation_confusion_matrix):
     predictions = model(inputs, training=False)
     t_loss = loss(gold, predictions, sample_weight=sample_weight)
     validation_loss(t_loss)
@@ -110,9 +103,14 @@ def main(model_name, train_path, max_length, test_size, batch_size, num_classes,
         validation_confusion_matrix.reset_states()
 
         for inputs, gold in tqdm(train_dataset, desc="Training in progress", total=train_length/batch_size):
-            train_step(model, optimizer, loss, inputs, gold, class_weight, train_loss, train_acc, train_top_k_categorical_acc, train_confusion_matrix)
+            labels = tf.argmax(gold, -1)
+            sample_weight = tf.map_fn(lambda x: class_weight[x], labels, dtype=tf.float32)
+            print('\nLabels:', labels)
+            train_step(model, optimizer, loss, inputs, gold, sample_weight, train_loss, train_acc, train_top_k_categorical_acc, train_confusion_matrix)
 
         for inputs, gold in tqdm(validation_dataset, desc="Validation in progress", total=validation_length/batch_size):
+            labels = tf.argmax(gold, -1)
+            sample_weight = tf.map_fn(lambda x: class_weight[x], labels, dtype=tf.float32)
             test_step(model, loss, inputs, gold, class_weight, validation_loss, validation_acc, validation_top_k_categorical_acc, validation_confusion_matrix)
 
         template = '\nEpoch {}: \nTrain Loss: {}, Acc: {}, Top 2: {}, Confusion matrix:\n{}\nValidation Loss: {}, Acc: {}, Top 2: {}, Confusion matrix:\n{}'
