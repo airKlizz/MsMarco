@@ -30,7 +30,7 @@ def create_tf_dataset(train_path, tokenizer, max_length, test_size, batch_size, 
     train_X, validation_X, train_y, validation_y = train_test_split(X, y, random_state=random_state, test_size=test_size)
     train_dataset = tf.data.Dataset.from_tensor_slices((train_X, train_y)).shuffle(shuffle).batch(batch_size)
     validation_dataset = tf.data.Dataset.from_tensor_slices((validation_X, validation_y)).batch(batch_size)
-    class_weight = list(np.sum(class_num_samples) / (np.shape(class_num_samples)[0] * class_num_samples))
+    class_weight = np.sum(class_num_samples) / (np.shape(class_num_samples)[0] * class_num_samples)
     return train_dataset, validation_dataset, len(train_y)+1, len(validation_y)+1, class_weight
 
 @tf.function
@@ -104,8 +104,6 @@ def main(model_name, train_path, max_length, test_size, batch_size, num_classes,
 
         for inputs, gold in tqdm(train_dataset, desc="Training in progress", total=train_length/batch_size):
             labels = tf.argmax(gold, -1)
-            print('\nLabels index:', labels.numpy().astype(int))
-            print('Class weight:', class_weight)
             sample_weight = class_weight[labels.numpy().astype(int)]
             train_step(model, optimizer, loss, inputs, gold, sample_weight, train_loss, train_acc, train_top_k_categorical_acc, train_confusion_matrix)
 
