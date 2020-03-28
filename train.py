@@ -90,6 +90,12 @@ def main(model_name, train_path, max_length, test_size, batch_size, num_classes,
     for epoch in range(epochs):
         train_loss.reset_states()
         validation_loss.reset_states()
+        train_acc.reset_states()
+        validation_acc.reset_states()
+        train_top_k_categorical_acc.reset_states()
+        validation_top_k_categorical_acc.reset_states()
+        train_confusion_matrix.reset_states()
+        validation_confusion_matrix.reset_states()
 
         for inputs, gold in tqdm(train_dataset, desc="Training in progress", total=train_length/batch_size):
             train_step(model, optimizer, loss, inputs, gold, train_loss, train_acc, train_top_k_categorical_acc, train_confusion_matrix)
