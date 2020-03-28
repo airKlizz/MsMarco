@@ -1,4 +1,5 @@
 import tensorflow as tf
+import numpy as np
 from transformers import TFAutoModel, AutoTokenizer
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
@@ -14,6 +15,7 @@ def create_tf_dataset(train_path, tokenizer, max_length, test_size, batch_size, 
 
     X = []
     y = []
+    class_num_samples = np.zeros(num_classes)
     for line in tqdm(lines, desc="Reading train file"):
         line = line.split('\t')
         assert len(line) == 5, print('\\t in querie or passage. \nQUERIE: {}\nPASSAGE: {}'.format(line[1], line[3]))
@@ -21,18 +23,23 @@ def create_tf_dataset(train_path, tokenizer, max_length, test_size, batch_size, 
                                   text_pair=str(line[3]),
                                   max_length=max_length,
                                   pad_to_max_length=True))
-        one_hot = [1 if i==int(line[4][0]) else 0 for i in range(num_classes)]
+        label = int(line[4][0])
+        class_num_samples[label] += 1
+        one_hot = [1 if i==label else 0 for i in range(num_classes)]
         y.append(one_hot)
     train_X, validation_X, train_y, validation_y = train_test_split(X, y, random_state=random_state, test_size=test_size)
     train_dataset = tf.data.Dataset.from_tensor_slices((train_X, train_y)).shuffle(shuffle).batch(batch_size)
     validation_dataset = tf.data.Dataset.from_tensor_slices((validation_X, validation_y)).batch(batch_size)
-    return train_dataset, validation_dataset, len(train_y)+1, len(validation_y)+1
+    class_weight = list(np.sum(class_num_samples) / (np.shape(class_num_samples)[0] * class_num_samples))
+    return train_dataset, validation_dataset, len(train_y)+1, len(validation_y)+1, class_weight
 
 @tf.function
-def train_step(model, optimizer, loss, inputs, gold, train_loss, train_acc, train_top_k_categorical_acc, train_confusion_matrix):
+def train_step(model, optimizer, loss, inputs, gold, class_weight, train_loss, train_acc, train_top_k_categorical_acc, train_confusion_matrix):
+    labels = tf.argmax(gold, -1)
+    sample_weight = tf.map_fn(lambda x: class_weight[x], labels, dtype=tf.float32)
     with tf.GradientTape() as tape:
         predictions = model(inputs, training=True)
-        loss_value = loss(gold, predictions)
+        loss_value = loss(gold, predictions, sample_weight=sample_weight)
     gradients = tape.gradient(loss_value, model.trainable_variables)
     optimizer.apply_gradients(zip(gradients, model.trainable_variables))
     train_loss(loss_value)
@@ -41,9 +48,11 @@ def train_step(model, optimizer, loss, inputs, gold, train_loss, train_acc, trai
     train_confusion_matrix(gold, predictions)
 
 @tf.function
-def test_step(model, loss, inputs, gold, validation_loss, validation_acc, validation_top_k_categorical_acc, validation_confusion_matrix):
+def test_step(model, loss, inputs, gold, class_weight, validation_loss, validation_acc, validation_top_k_categorical_acc, validation_confusion_matrix):
+    labels = tf.argmax(gold, -1)
+    sample_weight = tf.map_fn(lambda x: class_weight[x], labels, dtype=tf.float32)
     predictions = model(inputs, training=False)
-    t_loss = loss(gold, predictions)
+    t_loss = loss(gold, predictions, sample_weight=sample_weight)
     validation_loss(t_loss)
     validation_acc(gold, predictions)
     validation_top_k_categorical_acc(gold, predictions)
@@ -60,7 +69,7 @@ def main(model_name, train_path, max_length, test_size, batch_size, num_classes,
     '''
     Create train and validation dataset
     '''
-    train_dataset, validation_dataset, train_length, validation_length = create_tf_dataset(train_path, tokenizer, max_length, test_size, batch_size, num_classes)
+    train_dataset, validation_dataset, train_length, validation_length, class_weight = create_tf_dataset(train_path, tokenizer, max_length, test_size, batch_size, num_classes)
 
     '''
     Initialize optimizer and loss function for training
@@ -98,10 +107,10 @@ def main(model_name, train_path, max_length, test_size, batch_size, num_classes,
         validation_confusion_matrix.reset_states()
 
         for inputs, gold in tqdm(train_dataset, desc="Training in progress", total=train_length/batch_size):
-            train_step(model, optimizer, loss, inputs, gold, train_loss, train_acc, train_top_k_categorical_acc, train_confusion_matrix)
+            train_step(model, optimizer, loss, inputs, gold, class_weight, train_loss, train_acc, train_top_k_categorical_acc, train_confusion_matrix)
 
         for inputs, gold in tqdm(validation_dataset, desc="Validation in progress", total=validation_length/batch_size):
-            test_step(model, loss, inputs, gold, validation_loss, validation_acc, validation_top_k_categorical_acc, validation_confusion_matrix)
+            test_step(model, loss, inputs, gold, class_weight, validation_loss, validation_acc, validation_top_k_categorical_acc, validation_confusion_matrix)
 
         template = '\nEpoch {}: \nTrain Loss: {}, Acc: {}, Top 2: {}, Confusion matrix:\n{}\nValidation Loss: {}, Acc: {}, Top 2: {}, Confusion matrix:\n{}'
         print(template.format(epoch+1,
