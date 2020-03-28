@@ -104,12 +104,12 @@ def main(model_name, train_path, max_length, test_size, batch_size, num_classes,
 
         for inputs, gold in tqdm(train_dataset, desc="Training in progress", total=train_length/batch_size):
             labels = tf.argmax(gold, -1)
-            sample_weight = tf.map_fn(lambda x: class_weight[x], labels, dtype=tf.float32)
+            sample_weight = class_weight[labels.numpy()]
             train_step(model, optimizer, loss, inputs, gold, sample_weight, train_loss, train_acc, train_top_k_categorical_acc, train_confusion_matrix)
 
         for inputs, gold in tqdm(validation_dataset, desc="Validation in progress", total=validation_length/batch_size):
             labels = tf.argmax(gold, -1)
-            sample_weight = tf.map_fn(lambda x: class_weight[x], labels, dtype=tf.float32)
+            sample_weight = class_weight[labels.numpy()]
             test_step(model, loss, inputs, gold, class_weight, validation_loss, validation_acc, validation_top_k_categorical_acc, validation_confusion_matrix)
 
         template = '\nEpoch {}: \nTrain Loss: {}, Acc: {}, Top 2: {}, Confusion matrix:\n{}\nValidation Loss: {}, Acc: {}, Top 2: {}, Confusion matrix:\n{}'
