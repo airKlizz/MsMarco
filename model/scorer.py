@@ -14,8 +14,8 @@ class Scorer(tf.keras.Model):
         super(Scorer, self).__init__(name='Scorer')
         self.tokenizer = tokenizer
         self.model = model
-        self.dense = tf.keras.layers.Dense(512, activation='relu')
-        self.score = tf.keras.layers.Dense(n_class, activation='softmax')
+        self.dense = tf.keras.layers.Dense(512, activation='softmax')
+        self.score = tf.keras.layers.Dense(n_class, activation='sigmoid')
         self.max_length = max_length
 
     def from_pretrained(self, huggingface_model):
