@@ -5,6 +5,7 @@ data/passages/*
 data/qrels/*
 data/queries/*
 data/train/*
+data/mrr_data/*
 
 # Model weights
 model/weights/*
