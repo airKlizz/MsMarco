@@ -15,7 +15,7 @@ def create_tf_dataset(train_path, tokenizer, max_length, test_size, batch_size, 
 
     X = []
     y = []
-    for line in tqdm(lines, desc="Reading train file"):
+    for line in tqdm(lines[:min(len(lines), 40000000)], desc="Reading train file"):
         line = line.split('\t')
         assert len(line) == 3, '\\t in querie or passage. \nQUERIE: {}\nPASSAGE1: {}\nPASSAGE2: {}'.format(line[0], line[1], line[2])
         # Add relevant passage
