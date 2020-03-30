@@ -9,27 +9,29 @@ from metrics.confusion_matrix import ConfusionMatrix
 from mmr.run_mmr import EvaluationQueries
 from mmr.msmarco_eval import compute_metrics_from_files
 
-def create_tf_dataset(train_path, tokenizer, max_length, test_size, batch_size, num_classes, shuffle=10000, random_state=2020):
-    with open(train_path, 'r') as f:
-        lines = f.readlines()
-
+def create_tf_dataset(train_path, tokenizer, max_length, test_size, batch_size, num_samples, shuffle=10000, random_state=2020):
     X = []
     y = []
-    for line in tqdm(lines[:min(len(lines), 40000000)], desc="Reading train file"):
-        line = line.split('\t')
-        assert len(line) == 3, '\\t in querie or passage. \nQUERIE: {}\nPASSAGE1: {}\nPASSAGE2: {}'.format(line[0], line[1], line[2])
-        # Add relevant passage
-        X.append(tokenizer.encode(text=str(line[0]),
-                                  text_pair=str(line[1]),
-                                  max_length=max_length,
-                                  pad_to_max_length=True))
-        y.append([0, 1])
-        # Add non relevant passage
-        X.append(tokenizer.encode(text=str(line[0]),
-                                  text_pair=str(line[2]),
-                                  max_length=max_length,
-                                  pad_to_max_length=True))
-        y.append([1, 0])
+    count = 0
+    with open(train_path, 'r') as f:
+        for line in tqdm(f, desc="Reading train file"):
+            count += 1
+            if count >= num_samples:
+                break
+            line = line.split('\t')
+            assert len(line) == 3, '\\t in querie or passage. \nQUERIE: {}\nPASSAGE1: {}\nPASSAGE2: {}'.format(line[0], line[1], line[2])
+            # Add relevant passage
+            X.append(tokenizer.encode(text=str(line[0]),
+                                    text_pair=str(line[1]),
+                                    max_length=max_length,
+                                    pad_to_max_length=True))
+            y.append([0, 1])
+            # Add non relevant passage
+            X.append(tokenizer.encode(text=str(line[0]),
+                                    text_pair=str(line[2]),
+                                    max_length=max_length,
+                                    pad_to_max_length=True))
+            y.append([1, 0])
     train_X, validation_X, train_y, validation_y = train_test_split(X, y, random_state=random_state, test_size=test_size)
     train_dataset = tf.data.Dataset.from_tensor_slices((train_X, train_y)).shuffle(shuffle).batch(batch_size)
     validation_dataset = tf.data.Dataset.from_tensor_slices((validation_X, validation_y)).batch(batch_size)
@@ -56,7 +58,7 @@ def test_step(model, loss, inputs, gold, validation_loss, validation_acc, valida
     validation_top_k_categorical_acc(gold, predictions)
     validation_confusion_matrix(gold, predictions)
 
-def main(model_name, train_path, max_length, test_size, batch_size, num_classes, epochs, learning_rate, epsilon, clipnorm, bm25_path, passages_path, queries_path, n_top, n_queries_to_evaluate, mrr_every, reference_path, candidate_path):
+def main(model_name, train_path, max_length, test_size, batch_size, num_samples, num_classes, epochs, learning_rate, epsilon, clipnorm, bm25_path, passages_path, queries_path, n_top, n_queries_to_evaluate, mrr_every, reference_path, candidate_path):
     '''
     Load Hugging Face tokenizer and model
     '''
@@ -67,7 +69,7 @@ def main(model_name, train_path, max_length, test_size, batch_size, num_classes,
     '''
     Create train and validation dataset
     '''
-    train_dataset, validation_dataset, train_length, validation_length = create_tf_dataset(train_path, tokenizer, max_length, test_size, batch_size, num_classes)
+    train_dataset, validation_dataset, train_length, validation_length = create_tf_dataset(train_path, tokenizer, max_length, test_size, batch_size, num_samples)
 
     '''
     Initialize optimizer and loss function for training
@@ -144,6 +146,7 @@ if __name__ == "__main__":
     parser.add_argument("--test_size", type=float, help="ratio of the test dataset", default=0.2)
     parser.add_argument("--batch_size", type=int, help="batch size", default=24)
     parser.add_argument("--num_classes", type=int, help="number of output score class", default=4)
+    parser.add_argument("--num_samples", type=int, help="number of samples", default=50000)
     
     '''
     Variables for training
@@ -169,4 +172,4 @@ if __name__ == "__main__":
     Run main
     '''
     args = parser.parse_args()
-    main(args.model_name, args.train_path, args.max_length, args.test_size, args.batch_size, args.num_classes, args.epochs, args.learning_rate, args.epsilon, args.clipnorm, args.bm25_path, args.passages_path, args.queries_path, args.n_top, args.n_queries_to_evaluate, args.mrr_every, args.reference_path, args.candidate_path)
+    main(args.model_name, args.train_path, args.max_length, args.test_size, args.batch_size, args.num_samples, args.num_classes, args.epochs, args.learning_rate, args.epsilon, args.clipnorm, args.bm25_path, args.passages_path, args.queries_path, args.n_top, args.n_queries_to_evaluate, args.mrr_every, args.reference_path, args.candidate_path)
