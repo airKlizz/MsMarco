@@ -14,6 +14,7 @@ class Scorer(tf.keras.Model):
         super(Scorer, self).__init__(name='Scorer')
         self.tokenizer = tokenizer
         self.model = model
+        self.flatten = tf.keras.layers.Flatten()
         self.dense = tf.keras.layers.Dense(512, activation='sigmoid')
         self.score = tf.keras.layers.Dense(n_class, activation='softmax')
         self.max_length = max_length
@@ -34,7 +35,8 @@ class Scorer(tf.keras.Model):
         return inputs
 
     def call(self, inputs):
-        x = self.model(inputs)[1] # x.shape = (None, 768)
+        x = self.model(inputs)
+        x = self.flatten(x[0])
         x = self.dense(x)     
         x = self.score(x)
         return x
