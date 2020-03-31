@@ -119,4 +119,4 @@ class SquadDataset:
     self.train_X, self.validation_X, self.train_y, self.validation_y = train_test_split(np.array(self.X_tokenized), np.array(self.y), random_state=random_state, test_size=test_size)
     train_dataset = tf.data.Dataset.from_tensor_slices((self.train_X, self.train_y)).shuffle(shuffle).batch(batch_size)
     validation_dataset = tf.data.Dataset.from_tensor_slices((self.validation_X, self.validation_y)).batch(batch_size)
-    return train_dataset, validation_dataset, int(len(self.train_y)/batch_size+1), int(len(self.validation_y)/batch_size+1)
+    return train_dataset, validation_dataset, len(self.train_y), len(self.validation_y)

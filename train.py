@@ -32,7 +32,7 @@ def create_tf_dataset(train_path, tokenizer, max_length, test_size, batch_size, 
             y.append([0, 1])
             # Add no relevant passage
             no_relevant_inputs = tokenizer.encode_plus(text=str(line[0]),
-                                    text_pair=str(line[1]),
+                                    text_pair=str(line[2]),
                                     max_length=max_length,
                                     pad_to_max_length=True)
             X.append([no_relevant_inputs['input_ids'],
@@ -114,10 +114,10 @@ def main(model_name, train_path, max_length, test_size, batch_size, num_samples,
         train_confusion_matrix.reset_states()
         validation_confusion_matrix.reset_states()
 
-        for inputs, gold in tqdm(train_dataset, desc="Training in progress", total=train_length/batch_size):
+        for inputs, gold in tqdm(train_dataset, desc="Training in progress", total=int(train_length/batch_size+1)):
             train_step(model, optimizer, loss, inputs, gold, train_loss, train_acc, train_top_k_categorical_acc, train_confusion_matrix)
 
-        for inputs, gold in tqdm(validation_dataset, desc="Validation in progress", total=validation_length/batch_size):
+        for inputs, gold in tqdm(validation_dataset, desc="Validation in progress", total=int(validation_length/batch_size+1)):
             test_step(model, loss, inputs, gold, validation_loss, validation_acc, validation_top_k_categorical_acc, validation_confusion_matrix)
 
         template = '\nEpoch {}: \nTrain Loss: {}, Acc: {}, Top 2: {}, Confusion matrix:\n{}\nValidation Loss: {}, Acc: {}, Top 2: {}, Confusion matrix:\n{}'
@@ -144,7 +144,7 @@ if __name__ == "__main__":
     '''
     Variables for the model
     '''
-    parser.add_argument("--model_name", type=str, help="Name of the HugginFace Model", default="bert-large-uncased")
+    parser.add_argument("--model_name", type=str, help="Name of the HugginFace Model", default="bert-base-uncased")
 
     '''
     Variables for dataset
@@ -152,15 +152,15 @@ if __name__ == "__main__":
     parser.add_argument("--train_path", type=str, help="path to the train .tsv file", default="data/train/test.tsv")
     parser.add_argument("--max_length", type=int, help="max length of the tokenized input", default=256)
     parser.add_argument("--test_size", type=float, help="ratio of the test dataset", default=0.2)
-    parser.add_argument("--batch_size", type=int, help="batch size", default=24)
-    parser.add_argument("--num_classes", type=int, help="number of output score class", default=4)
+    parser.add_argument("--batch_size", type=int, help="batch size", default=12)
+    parser.add_argument("--num_classes", type=int, help="number of output score class", default=2)
     parser.add_argument("--num_samples", type=int, help="number of samples", default=50000)
     
     '''
     Variables for training
     '''
-    parser.add_argument("--epochs", type=int, help="number of epochs", default=20)
-    parser.add_argument("--learning_rate", type=float, help="learning rate", default=5e-5)
+    parser.add_argument("--epochs", type=int, help="number of epochs", default=5)
+    parser.add_argument("--learning_rate", type=float, help="learning rate", default=1e-5)
     parser.add_argument("--epsilon", type=float, help="epsilon", default=1e-8)
     parser.add_argument("--clipnorm", type=float, help="clipnorm", default=1.0)
 
@@ -171,8 +171,8 @@ if __name__ == "__main__":
     parser.add_argument("--passages_path", type=str, help="path to the BM25 passages .json file", default="data/passages/passages.bm25.small.json")
     parser.add_argument("--queries_path", type=str, help="path to the BM25 queries .tsv file", default="data/queries/queries.dev.small.tsv")
     parser.add_argument("--n_top", type=int, help="number of passages to re-rank after BM25", default=50)
-    parser.add_argument("--n_queries_to_evaluate", type=int, help="number of queries to evaluate for MMR", default=-1)
-    parser.add_argument("--mrr_every", type=int, help="number of epochs between mrr eval", default=5)
+    parser.add_argument("--n_queries_to_evaluate", type=int, help="number of queries to evaluate for MMR", default=1000)
+    parser.add_argument("--mrr_every", type=int, help="number of epochs between mrr eval", default=1)
     parser.add_argument("--reference_path", type=str, help="path to the reference gold .tsv file", default="data/evaluation/gold/qrels.dev.small.tsv")
     parser.add_argument("--candidate_path", type=str, help="path to the candidate run .tsv file", default="data/evaluation/model/run.tsv")
     

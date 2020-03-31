@@ -2,7 +2,7 @@ import tensorflow as tf
 import numpy as np
 
 class Scorer(tf.keras.Model):
-    def __init__(self, tokenizer, model, max_length, n_class):
+    def __init__(self, tokenizer, model, max_length, num_classes):
         '''
         Scorer is a HuggingFace model with a scorer head to perform a passage scoring based on a query.
 
@@ -16,7 +16,7 @@ class Scorer(tf.keras.Model):
         self.model = model
         self.flatten = tf.keras.layers.Flatten()
         self.dense = tf.keras.layers.Dense(512, activation='sigmoid')
-        self.classification = tf.keras.layers.Dense(n_class, activation='softmax')
+        self.classification = tf.keras.layers.Dense(num_classes, activation='softmax')
         self.max_length = max_length
 
     def from_pretrained(self, huggingface_model):
