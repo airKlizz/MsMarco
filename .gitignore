@@ -6,6 +6,7 @@ data/qrels/*
 data/queries/*
 data/train/*
 data/mrr_data/*
+squad/data/*
 
 # Model weights
 model/weights/*
