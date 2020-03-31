@@ -23,10 +23,11 @@ class Scorer(tf.keras.Model):
         self.model = self.model.from_pretrained(huggingface_model)
 
     def prepare_input(self, query, passage):
-        return self.tokenizer.encode(text=query, 
+        inputs = self.tokenizer.encode_plus(text=query, 
                                      text_pair=passage,
                                      max_length=self.max_length,
                                      pad_to_max_length=True)
+        return [inputs['input_ids'], inputs['attention_mask'], inputs['token_type_ids']]
 
     def prepare_inputs(self, queries, passages):
         inputs = []
