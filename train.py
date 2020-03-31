@@ -149,7 +149,7 @@ if __name__ == "__main__":
     '''
     Variables for dataset
     '''
-    parser.add_argument("--train_path", type=str, help="path to the train .tsv file", default="data/train/test.tsv")
+    parser.add_argument("--train_path", type=str, help="path to the train .tsv file", default="data/train/triples.train.small.tsv")
     parser.add_argument("--max_length", type=int, help="max length of the tokenized input", default=256)
     parser.add_argument("--test_size", type=float, help="ratio of the test dataset", default=0.2)
     parser.add_argument("--batch_size", type=int, help="batch size", default=12)
