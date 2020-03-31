@@ -21,16 +21,24 @@ def create_tf_dataset(train_path, tokenizer, max_length, test_size, batch_size, 
             line = line.split('\t')
             assert len(line) == 3, '\\t in querie or passage. \nQUERIE: {}\nPASSAGE1: {}\nPASSAGE2: {}'.format(line[0], line[1], line[2])
             # Add relevant passage
-            X.append(tokenizer.encode(text=str(line[0]),
+            relevant_inputs = tokenizer.encode_plus(text=str(line[0]),
                                     text_pair=str(line[1]),
                                     max_length=max_length,
-                                    pad_to_max_length=True))
+                                    pad_to_max_length=True)
+            X.append([relevant_inputs['input_ids'],
+                      relevant_inputs['attention_mask'],
+                      relevant_inputs['token_type_ids']                   
+                     ])
             y.append([0, 1])
-            # Add non relevant passage
-            X.append(tokenizer.encode(text=str(line[0]),
-                                    text_pair=str(line[2]),
+            # Add no relevant passage
+            no_relevant_inputs = tokenizer.encode_plus(text=str(line[0]),
+                                    text_pair=str(line[1]),
                                     max_length=max_length,
-                                    pad_to_max_length=True))
+                                    pad_to_max_length=True)
+            X.append([no_relevant_inputs['input_ids'],
+                      no_relevant_inputs['attention_mask'],
+                      no_relevant_inputs['token_type_ids']                   
+                     ])
             y.append([1, 0])
     train_X, validation_X, train_y, validation_y = train_test_split(X, y, random_state=random_state, test_size=test_size)
     train_dataset = tf.data.Dataset.from_tensor_slices((train_X, train_y)).shuffle(shuffle).batch(batch_size)

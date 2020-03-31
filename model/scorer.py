@@ -16,7 +16,7 @@ class Scorer(tf.keras.Model):
         self.model = model
         self.flatten = tf.keras.layers.Flatten()
         self.dense = tf.keras.layers.Dense(512, activation='sigmoid')
-        self.score = tf.keras.layers.Dense(n_class, activation='softmax')
+        self.classification = tf.keras.layers.Dense(n_class, activation='softmax')
         self.max_length = max_length
 
     def from_pretrained(self, huggingface_model):
@@ -35,10 +35,13 @@ class Scorer(tf.keras.Model):
         return inputs
 
     def call(self, inputs):
-        x = self.model(inputs)
+        inputs = tf.transpose(inputs, perm=[1, 0, 2])
+        assert len(inputs) == 3, 'inputs: {}'.format(tf.shape(inputs))
+        assert len(inputs[0]) == len(inputs[1]) and len(inputs[0]) == len(inputs[2])
+        x = self.model(inputs[0], attention_mask=inputs[1], token_type_ids=inputs[2])
         x = self.flatten(x[0])
         x = self.dense(x)     
-        x = self.score(x)
+        x = self.classification(x)
         return x
 
     def score_query_passage(self, query, passage):
