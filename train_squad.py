@@ -36,7 +36,7 @@ def test_step(model, loss, inputs, gold, validation_loss, validation_acc, valida
     validation_top_k_categorical_acc(gold, predictions)
     validation_confusion_matrix(gold, predictions)
 
-def main(model_name, train_path, max_length, test_size, batch_size, num_samples, num_classes, epochs, learning_rate, epsilon, clipnorm, bm25_path, passages_path, queries_path, n_top, n_queries_to_evaluate, mrr_every, reference_path, candidate_path):
+def main(model_name, train_path, max_length, test_size, batch_size, num_samples, num_classes, epochs, learning_rate, epsilon, clipnorm):
     '''
     Load Hugging Face tokenizer and model
     '''
