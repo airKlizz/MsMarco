@@ -123,7 +123,7 @@ def main(model_name, train_path, max_length, test_size, batch_size, num_samples,
         for inputs, gold in tqdm(train_dataset, desc="Training in progress", total=int(train_length/batch_size+1)):
             training_step += 1
             train_step(model, optimizer, loss, inputs, gold, train_loss, train_acc, train_top_k_categorical_acc, train_confusion_matrix)
-            if training_step-1 % 1800 == 0:
+            if (training_step-1) % 1800 == 0:
                 print(template_step.format(training_step,
                                 train_loss.result(),
                                 train_acc.result(),
