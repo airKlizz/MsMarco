@@ -123,7 +123,7 @@ def main(model_name, train_path, max_length, test_size, batch_size, num_samples,
         for inputs, gold in tqdm(train_dataset, desc="Training in progress", total=int(train_length/batch_size+1)):
             training_step += 1
             train_step(model, optimizer, loss, inputs, gold, train_loss, train_acc, train_top_k_categorical_acc, train_confusion_matrix)
-            if training_step % 1800 == 0:
+            if training_step-1 % 1800 == 0:
                 print(template_step.format(training_step,
                                 train_loss.result(),
                                 train_acc.result(),
@@ -132,7 +132,7 @@ def main(model_name, train_path, max_length, test_size, batch_size, num_samples,
                                 ))
                 model_save_path_step = model_save_path_step_template.format(model_name=model_name, epoch=epoch, step=training_step)
                 print('Saving: ', model_save_path_step)
-                model.saved_weights(model_save_path_step, save_format='h5')
+                model.save_weights(model_save_path_step, save_format='h5')
 
 
         for inputs, gold in tqdm(validation_dataset, desc="Validation in progress", total=int(validation_length/batch_size+1)):
@@ -159,7 +159,7 @@ def main(model_name, train_path, max_length, test_size, batch_size, num_samples,
                 previus_mrr = mmr_metrics['MRR @10']
                 model_save_path = model_save_path_template.format(model_name=model_name, epoch=epoch, mrr=previus_mrr)
                 print('Saving: ', model_save_path)
-                model.saved_weights(model_save_path, save_format='h5')
+                model.save_weights(model_save_path, save_format='h5')
 
 
 if __name__ == "__main__":
