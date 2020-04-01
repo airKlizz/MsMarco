@@ -66,7 +66,7 @@ def test_step(model, loss, inputs, gold, validation_loss, validation_acc, valida
     validation_top_k_categorical_acc(gold, predictions)
     validation_confusion_matrix(gold, predictions)
 
-def main(model_name, train_path, max_length, test_size, batch_size, num_samples, num_classes, epochs, learning_rate, epsilon, clipnorm, bm25_path, passages_path, queries_path, n_top, n_queries_to_evaluate, mrr_every, reference_path, candidate_path):
+def main(model_name, train_path, max_length, test_size, batch_size, num_samples, num_classes, epochs, learning_rate, epsilon, clipnorm, save_path, bm25_path, passages_path, queries_path, n_top, n_queries_to_evaluate, mrr_every, reference_path, candidate_path):
     '''
     Load Hugging Face tokenizer and model
     '''
@@ -104,6 +104,8 @@ def main(model_name, train_path, max_length, test_size, batch_size, num_samples,
     '''
     Training loop over epochs
     '''
+    model_save_path_template = save_path+'model_{model_name}_epoch_{epoch:04d}_mrr_{mrr:.3f}.h5'
+    previus_mrr = 0.19
     for epoch in range(epochs):
         train_loss.reset_states()
         validation_loss.reset_states()
@@ -137,6 +139,11 @@ def main(model_name, train_path, max_length, test_size, batch_size, num_samples,
             print(
                 'Queries ranked: {}, MRR @10: {}'.format(mmr_metrics['QueriesRanked'], mmr_metrics['MRR @10'])
             )
+            if mmr_metrics['MRR @10'] > previus_mrr:
+                previus_mrr = mmr_metrics['MRR @10']
+                model_save_path = model_save_path_template.format(model_name=model_name, epoch=epoch, mrr=previus_mrr)
+                print('Saving: ', model_save_path)
+                model.saved_weights(model_save_path, save_format='h5')
 
 
 if __name__ == "__main__":
@@ -163,6 +170,7 @@ if __name__ == "__main__":
     parser.add_argument("--learning_rate", type=float, help="learning rate", default=1e-5)
     parser.add_argument("--epsilon", type=float, help="epsilon", default=1e-8)
     parser.add_argument("--clipnorm", type=float, help="clipnorm", default=1.0)
+    parser.add_argument("--save_path", type=str, help="path to the save folder", default="model/saved_weights/")
 
     '''
     Variables for evaluation
@@ -180,4 +188,4 @@ if __name__ == "__main__":
     Run main
     '''
     args = parser.parse_args()
-    main(args.model_name, args.train_path, args.max_length, args.test_size, args.batch_size, args.num_samples, args.num_classes, args.epochs, args.learning_rate, args.epsilon, args.clipnorm, args.bm25_path, args.passages_path, args.queries_path, args.n_top, args.n_queries_to_evaluate, args.mrr_every, args.reference_path, args.candidate_path)
+    main(args.model_name, args.train_path, args.max_length, args.test_size, args.batch_size, args.num_samples, args.num_classes, args.epochs, args.learning_rate, args.epsilon, args.clipnorm, args.save_path, args.bm25_path, args.passages_path, args.queries_path, args.n_top, args.n_queries_to_evaluate, args.mrr_every, args.reference_path, args.candidate_path)
