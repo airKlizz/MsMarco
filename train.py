@@ -106,7 +106,7 @@ def main(model_name, train_path, max_length, test_size, batch_size, num_samples,
     '''
     model_save_path_template = save_path+'model_{model_name}_epoch_{epoch:04d}_mrr_{mrr:.3f}.h5'
     model_save_path_step_template = save_path+'model_{model_name}_epoch_{epoch:04d}_step_{step:04d}.h5'
-    template_step = '\nStep {}: \nTrain Loss: {}, Acc: {}, Top 2: {}, Confusion matrix:\n{}\nValidation Loss: {}'
+    template_step = '\nStep {}: \nTrain Loss: {}, Acc: {}, Top 2: {}, Confusion matrix:\n{}'
     template_epoch = '\nEpoch {}: \nTrain Loss: {}, Acc: {}, Top 2: {}, Confusion matrix:\n{}\nValidation Loss: {}, Acc: {}, Top 2: {}, Confusion matrix:\n{}'
     previus_mrr = 0.19
     for epoch in range(epochs):
