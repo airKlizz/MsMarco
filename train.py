@@ -105,10 +105,12 @@ def main(model_name, train_path, max_length, test_size, batch_size, num_samples,
     Training loop over epochs
     '''
     model_save_path_template = save_path+'model_{model_name}_epoch_{epoch:04d}_mrr_{mrr:.3f}.h5'
-    model_save_path_step_template = save_path+'model_{model_name}_epoch_{epoch:04d}_step_{step:04d}.h5'
-    template_step = '\nStep {}: \nTrain Loss: {}, Acc: {}, Top 2: {}, Confusion matrix:\n{}'
+    model_save_path_step_template = save_path+'model_{model_name}_epoch_{epoch:04d}_step_{step:04d}_loss_{loss:.3f}.h5'
+    template_step = '\Step {}: \nTrain Loss: {}, Acc: {}, Top 2: {}, Confusion matrix:\n{}\nValidation Loss: {}, Acc: {}, Top 2: {}, Confusion matrix:\n{}'
     template_epoch = '\nEpoch {}: \nTrain Loss: {}, Acc: {}, Top 2: {}, Confusion matrix:\n{}\nValidation Loss: {}, Acc: {}, Top 2: {}, Confusion matrix:\n{}'
     previus_mrr = 0.19
+    previus_validation_loss = 10000000
+
     for epoch in range(epochs):
         train_loss.reset_states()
         validation_loss.reset_states()
@@ -123,21 +125,43 @@ def main(model_name, train_path, max_length, test_size, batch_size, num_samples,
         for inputs, gold in tqdm(train_dataset, desc="Training in progress", total=int(train_length/batch_size+1)):
             training_step += 1
             train_step(model, optimizer, loss, inputs, gold, train_loss, train_acc, train_top_k_categorical_acc, train_confusion_matrix)
-            if (training_step-1) % 1800 == 0:
-                print(template_step.format(training_step,
+            
+            '''
+            Validation loop every XXXX steps
+            '''
+            if (training_step-1) % 2000 == 0:  
+
+                for inputs, gold in tqdm(validation_dataset, desc="Validation in progress", total=int(validation_length/batch_size+1)):
+                    test_step(model, loss, inputs, gold, validation_loss, validation_acc, validation_top_k_categorical_acc, validation_confusion_matrix)
+
+                print(template_step.format(training_step+1,
                                 train_loss.result(),
                                 train_acc.result(),
                                 train_top_k_categorical_acc.result(),
-                                train_confusion_matrix.result()
+                                train_confusion_matrix.result(),
+                                validation_loss.result(),
+                                validation_acc.result(),
+                                validation_top_k_categorical_acc.result(),
+                                validation_confusion_matrix.result()
                                 ))
-                model_save_path_step = model_save_path_step_template.format(model_name=model_name, epoch=epoch, step=training_step)
-                print('Saving: ', model_save_path_step)
-                model.save_weights(model_save_path_step, save_format='h5')
 
+                if previus_validation_loss > validation_loss.result().numpy():
+                    previus_validation_loss = validation_loss.result().numpy()
+                    model_save_path_step = model_save_path_step_template.format(model_name=model_name, epoch=epoch, step=training_step, loss=previus_validation_loss)
+                    print('Saving: ', model_save_path_step)
+                    model.save_weights(model_save_path_step, save_format='h5')
+
+                train_loss.reset_states()
+                validation_loss.reset_states()
+                train_acc.reset_states()
+                validation_acc.reset_states()
+                train_top_k_categorical_acc.reset_states()
+                validation_top_k_categorical_acc.reset_states()
+                train_confusion_matrix.reset_states()
+                validation_confusion_matrix.reset_states()
 
         for inputs, gold in tqdm(validation_dataset, desc="Validation in progress", total=int(validation_length/batch_size+1)):
             test_step(model, loss, inputs, gold, validation_loss, validation_acc, validation_top_k_categorical_acc, validation_confusion_matrix)
-
         
         print(template_epoch.format(epoch+1,
                                 train_loss.result(),
@@ -146,7 +170,7 @@ def main(model_name, train_path, max_length, test_size, batch_size, num_samples,
                                 train_confusion_matrix.result(),
                                 validation_loss.result(),
                                 validation_acc.result(),
-                                validation_top_k_categorical_acc.result().numpy,
+                                validation_top_k_categorical_acc.result(),
                                 validation_confusion_matrix.result()
                                 ))
         if (epoch+1) % mrr_every == 0:
