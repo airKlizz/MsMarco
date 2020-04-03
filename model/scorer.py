@@ -26,7 +26,9 @@ class Scorer(tf.keras.Model):
         inputs = self.tokenizer.encode_plus(text=query, 
                                      text_pair=passage,
                                      max_length=self.max_length,
-                                     pad_to_max_length=True)
+                                     pad_to_max_length=True, 
+                                     return_token_type_ids=True, 
+                                     return_attention_mask=True)
         return [inputs['input_ids'], inputs['attention_mask'], inputs['token_type_ids']]
 
     def prepare_inputs(self, queries, passages):
