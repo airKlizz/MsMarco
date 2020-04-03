@@ -24,7 +24,9 @@ def create_tf_dataset(train_path, tokenizer, max_length, test_size, batch_size, 
             relevant_inputs = tokenizer.encode_plus(text=str(line[0]),
                                     text_pair=str(line[1]),
                                     max_length=max_length,
-                                    pad_to_max_length=True)
+                                    pad_to_max_length=True,
+                                    return_token_type_ids=True, 
+                                    return_attention_mask=True)
             X.append([relevant_inputs['input_ids'],
                       relevant_inputs['attention_mask'],
                       relevant_inputs['token_type_ids']                   
@@ -34,7 +36,9 @@ def create_tf_dataset(train_path, tokenizer, max_length, test_size, batch_size, 
             no_relevant_inputs = tokenizer.encode_plus(text=str(line[0]),
                                     text_pair=str(line[2]),
                                     max_length=max_length,
-                                    pad_to_max_length=True)
+                                    pad_to_max_length=True, 
+                                    return_token_type_ids=True, 
+                                    return_attention_mask=True)
             X.append([no_relevant_inputs['input_ids'],
                       no_relevant_inputs['attention_mask'],
                       no_relevant_inputs['token_type_ids']                   
@@ -106,7 +110,7 @@ def main(model_name, train_path, max_length, test_size, batch_size, num_samples,
     '''
     model_save_path_template = save_path+'model_{model_name}_epoch_{epoch:04d}_mrr_{mrr:.3f}.h5'
     model_save_path_step_template = save_path+'model_{model_name}_epoch_{epoch:04d}_step_{step:04d}_loss_{loss:.3f}.h5'
-    template_step = '\Step {}: \nTrain Loss: {}, Acc: {}, Top 2: {}, Confusion matrix:\n{}\nValidation Loss: {}, Acc: {}, Top 2: {}, Confusion matrix:\n{}'
+    template_step = '\nStep {}: \nTrain Loss: {}, Acc: {}, Top 2: {}, Confusion matrix:\n{}\nValidation Loss: {}, Acc: {}, Top 2: {}, Confusion matrix:\n{}'
     template_epoch = '\nEpoch {}: \nTrain Loss: {}, Acc: {}, Top 2: {}, Confusion matrix:\n{}\nValidation Loss: {}, Acc: {}, Top 2: {}, Confusion matrix:\n{}'
     previus_mrr = 0.19
     previus_validation_loss = 10000000
