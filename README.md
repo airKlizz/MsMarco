@@ -1,3 +1,8 @@
+**To do:**
+- [ ] create a section with the code to reproduce the MRR scores
+- [ ] train with other Hugging Face model like Electra
+- [ ] continue the training with more training pairs
+
 # Re-ranking task using MS MARCO dataset
 
 Code for train a re-ranking model on MS MARCO dataset using [Hugging Face](https://huggingface.co/transformers/) library.
