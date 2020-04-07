@@ -42,7 +42,7 @@ It tooks around 6 hours on google colab GPU.
 
 | Model | ``bert-large-cased`` | ``albert-large-v2`` | ``roberta-large`` |
 | --- | ----------- | --- | ----------- |
-| Classification accuracy | 0.91 | 0.91 | 0.93 | 
+| Classification accuracy | 0.90 | 0.91 | 0.93 | 
 | @MRR 10 | 0.278 | 0.291 | 0.303 |
 | Saved weights | [.h5 file](https://drive.google.com/open?id=1-_UWYwclkSPrngxkZz4C2pRcwSddqDbC) | [.h5 file](https://drive.google.com/open?id=1-827HbZsLhPLI6NYclLsJ1VNv36Bd9WN) | [.h5 file](https://drive.google.com/open?id=107VGIUS8jrvBFhe4tipw4SQ7t0s1-Cjw) |
 
