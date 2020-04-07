@@ -130,5 +130,9 @@ print(scores)
 # [1, 0]
 ```
 
+### Bonus : use web, re-ranking and summarization to generate a wiki style articles
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1VyjO0rbWowOckzyfIIuxjBlO1qUtevOF#scrollTo=V5qoECBryCQk)
+
 ## License
 [MIT](https://choosealicense.com/licenses/mit/)
