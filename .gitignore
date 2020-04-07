@@ -7,6 +7,7 @@ data/queries/*
 data/train/*
 data/mrr_data/*
 squad/data/*
+data/create*
 
 # Model weights
 model/weights/*
@@ -15,3 +16,11 @@ model/weights/*
 metrics/__pycache__/
 mmr/__pycache__/
 model/__pycache__/
+
+.vscode/
+
+.gitignore
+
+train_*
+
+
