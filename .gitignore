@@ -1,0 +1,17 @@
+# Data files
+data/collections/*
+data/evaluation/*
+data/passages/*
+data/qrels/*
+data/queries/*
+data/train/*
+data/mrr_data/*
+squad/data/*
+
+# Model weights
+model/weights/*
+
+# __pycache__
+metrics/__pycache__/
+mmr/__pycache__/
+model/__pycache__/
