@@ -8,7 +8,7 @@ Description from the [offical repository](https://github.com/microsoft/MSMARCO-P
 
 >Given a query q and a the 1000 most relevant passages P = p1, p2, p3,... p1000, as retrieved by BM25 a succeful system is expected to rerank the most relevant passage as high as possible. For this task not all 1000 relevant items have a human labeled relevant passage. Evaluation will be done using MRR
 
-All the data are available on the official [repository](https://github.com/microsoft/MSMARCO-Passage-Ranking) of the task.
+All the data are available on the [official repository](https://github.com/microsoft/MSMARCO-Passage-Ranking) of the task.
 
 The leaderboard is availaible on this [link](https://microsoft.github.io/msmarco/#ranking)
 
@@ -25,6 +25,8 @@ These are the results and model weights after a training with parameters :
   - ``learning_rate = 3e-6``
   - ``batch_size = 6``
   - ``num_samples = 50000`` (number of triples) (correspond to 100000 training query-passage pairs)
+
+It tooks around 6 hours on google colab GPU.
 
 | Model | ``bert-large-cased`` | ``albert-large-v2`` | ``roberta-large`` |
 | --- | ----------- | --- | ----------- |
