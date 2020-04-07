@@ -2,6 +2,13 @@
 
 Code for train a re-ranking model on MS MARCO dataset using [Hugging Face](https://huggingface.co/transformers/) librairy.
 
+| Table of contents |
+| ----------------- |
+| [Task](#task) |
+| [My model](#my-model) |
+| [Results](#results) |
+| [Getting started](#getting-started) |
+
 ## Task
 
 Description from the [offical repository](https://github.com/microsoft/MSMARCO-Passage-Ranking) of the task:
