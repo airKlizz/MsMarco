@@ -1,6 +1,6 @@
 # Data files
 data/collections/*
-data/evaluation/*
+data/evaluation/test/
 data/passages/*
 data/qrels/*
 data/queries/*
