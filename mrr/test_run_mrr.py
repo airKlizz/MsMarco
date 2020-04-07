@@ -1,4 +1,4 @@
-from run_mmr import EvaluationQueries
+from run_mrr import EvaluationQueries
 from msmarco_eval import compute_metrics_from_files
 
 class FakeScorer():
@@ -21,12 +21,12 @@ mrr_ref = 0.18741227770955546
 
 model = FakeScorer()
 
-mmr = EvaluationQueries(bm25_path, queries_path, passages_path, n_top)
+mrr = EvaluationQueries(bm25_path, queries_path, passages_path, n_top)
 
-mmr.score(model, candidate_path, n_queries_to_evaluate)
-mmr_metrics = compute_metrics_from_files(reference_path, candidate_path)
+mrr.score(model, candidate_path, n_queries_to_evaluate)
+mrr_metrics = compute_metrics_from_files(reference_path, candidate_path)
 
-assert int(1000*mrr_ref) == int(1000*mmr_metrics['MRR @10']), "Test failed"
+assert int(1000*mrr_ref) == int(1000*mrr_metrics['MRR @10']), "Test failed"
 
-print(mmr_metrics)
+print(mrr_metrics)
 print('Test ok')

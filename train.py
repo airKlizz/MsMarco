@@ -6,8 +6,8 @@ from tqdm import tqdm
 import argparse
 from model.scorer import Scorer
 from metrics.confusion_matrix import ConfusionMatrix
-from mmr.run_mmr import EvaluationQueries
-from mmr.msmarco_eval import compute_metrics_from_files
+from mrr.run_mrr import EvaluationQueries
+from mrr.msmarco_eval import compute_metrics_from_files
 
 def create_tf_dataset(train_path, tokenizer, max_length, test_size, batch_size, num_samples, shuffle=10000, random_state=2020):
     X = []
@@ -101,7 +101,7 @@ def main(model_name, train_path, max_length, test_size, batch_size, num_samples,
     train_confusion_matrix = ConfusionMatrix(num_classes, name='train_confusion_matrix')
     validation_confusion_matrix = ConfusionMatrix(num_classes, name='validation_confusion_matrix')
 
-    mmr = EvaluationQueries(bm25_path, queries_path, passages_path, n_top)
+    mrr = EvaluationQueries(bm25_path, queries_path, passages_path, n_top)
     if n_queries_to_evaluate == -1:
         n_queries_to_evaluate = None
 
@@ -178,13 +178,13 @@ def main(model_name, train_path, max_length, test_size, batch_size, num_samples,
                                 validation_confusion_matrix.result()
                                 ))
         if (epoch+1) % mrr_every == 0:
-            mmr.score(model, candidate_path, n_queries_to_evaluate)
-            mmr_metrics = compute_metrics_from_files(reference_path, candidate_path)
+            mrr.score(model, candidate_path, n_queries_to_evaluate)
+            mrr_metrics = compute_metrics_from_files(reference_path, candidate_path)
             print(
-                'Queries ranked: {}, MRR @10: {}'.format(mmr_metrics['QueriesRanked'], mmr_metrics['MRR @10'])
+                'Queries ranked: {}, MRR @10: {}'.format(mrr_metrics['QueriesRanked'], mrr_metrics['MRR @10'])
             )
-            if mmr_metrics['MRR @10'] > previus_mrr:
-                previus_mrr = mmr_metrics['MRR @10']
+            if mrr_metrics['MRR @10'] > previus_mrr:
+                previus_mrr = mrr_metrics['MRR @10']
                 model_save_path = model_save_path_template.format(model_name=model_name, epoch=epoch, mrr=previus_mrr)
                 print('Saving: ', model_save_path)
                 model.save_weights(model_save_path, save_format='h5')
