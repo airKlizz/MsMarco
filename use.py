@@ -57,7 +57,7 @@ class Ranker():
         return passages_scores[0][:top_n], passages_scores[1][:top_n]
 
     def get_rerank_top(self, top_n=100, top_n_bm25=100, batch_size=16):
-        bm25_top = self.get_bm25_top(top_n_bm25)
+        bm25_top, _ = self.get_bm25_top(top_n_bm25)
         bm25_top_text = [passage.text for passage in bm25_top]
         rerank_scores = self.scorer.score_query_passages(self.topic, bm25_top_text, batch_size)
         passages_scores = list(zip(*sorted(zip(bm25_top, rerank_scores), key=lambda x: x[1], reverse=True)))
