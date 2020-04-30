@@ -24,6 +24,7 @@ class Ranker():
         self.topic = topic
         self.url_done = []
         self.passages = []
+        self.bm25_scores = []
 
         tokenizer = AutoTokenizer.from_pretrained(model_name)
         self.scorer = Scorer(tokenizer, TFAutoModel, max_length, num_classes)
