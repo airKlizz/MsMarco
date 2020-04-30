@@ -14,7 +14,7 @@ class Passage():
         self.date = date
 
     def __repr__(self):
-        return {'text': self.text, 'source': self.source, 'date': self.date}
+        return 'Date: {}\nSource: {}\n{}'.format(self.date, self.source, self.text)
 
     def __str__(self):
         return 'Date: {}\nSource: {}\n{}'.format(self.date, self.source, self.text)
@@ -52,7 +52,7 @@ class Ranker():
 
     def get_bm25_top(self, top_n=100):
         if len(self.passages) != len(self.bm25_scores):
-            run_bm25(self)
+            self.run_bm25()
         passages_scores = list(zip(*sorted(zip(self.passages, self.bm25_scores), key=lambda x: x[1], reverse=True)))
         return passages_scores[0][:top_n], passages_scores[1][:top_n]
 
