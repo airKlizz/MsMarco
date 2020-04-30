@@ -21,7 +21,7 @@ class Ranker():
 
         tokenizer = AutoTokenizer.from_pretrained(model_name)
         self.scorer = Scorer(tokenizer, TFAutoModel, max_length, num_classes)
-        self.scorer.from_config(model_name)
+        self.scorer.from_pretrained(model_name)
         self.scorer(tf.zeros([1, 3, 256], tf.int32))
         self.scorer.load_weights(weights_path)
         self.scorer.compile(run_eagerly=True)
