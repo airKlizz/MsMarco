@@ -56,38 +56,35 @@ class Ranker():
         passages_scores = list(zip(*sorted(zip(bm25_top, rerank_scores), key=lambda x: x[1], reverse=True)))
         return passages_scores[0][:top_n], passages_scores[1][:top_n]
 
-    @staticmethod
-    def query_to_urls(query, num_urls, wikipedia=True):
-        urls = []
-        for url in search(query, lang='en', num=num_urls, stop=num_urls, extra_params={'lr': 'lang_en'}):
-            if wikipedia or "wikipedia" not in url:
-                urls.append(url)
-        return urls
+def query_to_urls(query, num_urls, wikipedia=True):
+    urls = []
+    for url in search(query, lang='en', num=num_urls, stop=num_urls, extra_params={'lr': 'lang_en'}):
+        if wikipedia or "wikipedia" not in url:
+            urls.append(url)
+    return urls
 
-    @staticmethod
-    def passages_from_url(url):
-        article = Article(url)
-        article.download()
-        article.parse()
-        text = article.text
-        date = article.publish_date
-        passages = []
-        for passage in text.split('\n\n'):
-            if is_clean(passage):
-                passages.append(Passage(passage, url, date))
-        return passages
+def passages_from_url(url):
+    article = Article(url)
+    article.download()
+    article.parse()
+    text = article.text
+    date = article.publish_date
+    passages = []
+    for passage in text.split('\n\n'):
+        if is_clean(passage):
+            passages.append(Passage(passage, url, date))
+    return passages
 
-    @staticmethod
-    def is_clean(passage):
-        # Too short
-        if len(passage.split(' ')) < 10:
-            return False
-        # List
-        if len(passage.split('\n')) > 2:
-            return False
-        # Items
-        if len(passage.split('\t')) > 2:
-            return False
-        return True
+def is_clean(passage):
+    # Too short
+    if len(passage.split(' ')) < 10:
+        return False
+    # List
+    if len(passage.split('\n')) > 2:
+        return False
+    # Items
+    if len(passage.split('\t')) > 2:
+        return False
+    return True
 
 
