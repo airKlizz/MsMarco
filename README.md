@@ -1,3 +1,8 @@
+**To do:**
+- [ ] create a section with the code to reproduce the MRR scores
+- [ ] train with other Hugging Face model like Electra
+- [ ] continue the training with more training pairs
+
 # Re-ranking task using MS MARCO dataset
 
 Code for train a re-ranking model on MS MARCO dataset using [Hugging Face](https://huggingface.co/transformers/) library.
@@ -37,7 +42,7 @@ It tooks around 6 hours on google colab GPU.
 
 | Model | ``bert-large-cased`` | ``albert-large-v2`` | ``roberta-large`` |
 | --- | ----------- | --- | ----------- |
-| Classification accuracy | 0.91 | 0.91 | 0.93 | 
+| Classification accuracy | 0.90 | 0.91 | 0.93 | 
 | @MRR 10 | 0.278 | 0.291 | 0.303 |
 | Saved weights | [.h5 file](https://drive.google.com/open?id=1-_UWYwclkSPrngxkZz4C2pRcwSddqDbC) | [.h5 file](https://drive.google.com/open?id=1-827HbZsLhPLI6NYclLsJ1VNv36Bd9WN) | [.h5 file](https://drive.google.com/open?id=107VGIUS8jrvBFhe4tipw4SQ7t0s1-Cjw) |
 
@@ -129,6 +134,10 @@ scores = model.score_query_passages(query, passages, 2)
 print(scores) 
 # [1, 0]
 ```
+
+### Bonus : use web, re-ranking and summarization to generate a wiki style articles
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1VyjO0rbWowOckzyfIIuxjBlO1qUtevOF#scrollTo=V5qoECBryCQk)
 
 ## License
 [MIT](https://choosealicense.com/licenses/mit/)
