@@ -13,6 +13,12 @@ class Passage():
         self.source = source
         self.date = date
 
+    def __repr__(self):
+        return {'text': self.text, 'source': self.source, 'date': self.date}
+
+    def __str__(self):
+        return 'Date: {}\nSource: {}\n{}'.format(self.date, self.source, self.text)
+
 class Ranker():
     def __init__(self, topic, model_name, weights_path, max_length=256, num_classes=2):
         self.topic = topic
