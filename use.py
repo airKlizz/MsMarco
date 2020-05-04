@@ -12,6 +12,13 @@ class Passage():
         self.text = text
         self.source = source
         self.date = date
+    
+    def __eq__(self, other): 
+        if not isinstance(other, Passage):
+            # don't attempt to compare against unrelated types
+            return NotImplemented
+
+        return self.text == other.text
 
     def __repr__(self):
         return 'Date: {}\nSource: {}\n{}'.format(self.date, self.source, self.text)
