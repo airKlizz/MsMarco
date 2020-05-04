@@ -39,10 +39,10 @@ class Ranker():
             if url in self.url_done: continue
             try:
                 passages = passages_from_url(url)
-		for passage in passages:
-			if passage in self.passages:
-				continue
-			self.passages.append(passage)
+                for passage in passages:
+                    if passage in self.passages:
+                        continue
+                    self.passages.append(passage)
                 self.url_done += url
             except:
                 pass
