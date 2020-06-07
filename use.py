@@ -1,7 +1,10 @@
 import tensorflow as tf
 import numpy as np
 from transformers import TFAutoModel, AutoTokenizer
-from model.scorer import Scorer
+try:
+    from model.scorer import Scorer
+except:
+    from .model.scorer import Scorer
 
 from newspaper import Article
 from googlesearch import search
